@@ -1,0 +1,18 @@
+[package]
+name = "mathematica-notebook-filter"
+version = "0.1.0"
+authors = ["JP-Ellis <josh@jpellis.me>"]
+description = """
+A program that parses Mathematica notebook files and strips them of superfluous
+information so that they can be committed into version control systems more
+easily.
+"""
+documentation = "https://github.com/JP-Ellis/mathematica-notebook-filter"
+homepage = "https://github.com/JP-Ellis/mathematica-notebook-filter"
+repository  = "https://github.com/JP-Ellis/mathematica-notebook-filter"
+readme = "README.md"
+keywords = ["vcs", "mathematica", "filter"]
+categories = ["command-line", "text-processing"]
+license = "GPLv3"
+
+[dependencies]
