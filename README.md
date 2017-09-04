@@ -92,18 +92,19 @@ GraphicsBox[{{{{}, {},
 Note that the above snippet was significantly abbreviated as the compressed
 base-64 encoded data is an additional 300 lines or so.
 
-For the version control system, this large output is extremely programming as a
-small change in the input (such as replace `Sin[x]` with `Sin[2 x]`) will
-produce a 300+ line diff.
-
-This Rust program parses the Mathematica notebook file format and removes all
-the output cells and metadata in order that the git diffs becomes much more
-sensible.
+For the version control system, this large output is extremely cumbersome as a
+small change in the input (such as replacing `Sin[x]` with `Sin[2 x]`) will
+produce a 300+ line diff.  The purpose of `mathematica-notebook-filter` is
+specifically to avoid such large diffs and try and make them much more
+meaningful.  It does so by parsing the Mathematica notebook file format and
+removing all the output cells and metadata.  The program is implemented in
+[Rust](https://www.rust-lang.org/) and distributed on
+[crates.io](https://crates.io/crates/mathematica-notebook-filter).
 
 Having said that, it should be noted that Mathematica unfortunately does not
 store the input in a very simple form as it not only stores the plain
-Mathematica expression, but also stored formatting information.  As a concrete
-example, an `Input` cell with the above plot function will be stored in the
+Mathematica expression, but also stores formatting information.  As a concrete
+example, an input cell with the above plot function will be stored in the
 Notebook file as:
 
 ```mathematica
@@ -141,12 +142,14 @@ notebooks as scripts files (with extension `.wl` or `.m`).
 
 ## Usage Notes
 
-This program parses Mathematica notebook files (usually stored with the
-extension `.nb`) and strips all generated outputs and other metadata.  The
-program reads from standard input, and outputs to standard output and is
-intended to be integrated with version control systems (see
-[below](#Integration) for instructions).  If you wish to run it manually, a
-simple call would be:
+`mathematica-notebook-filter` parses Mathematica notebook files (usually stored
+with the extension `.nb`) and strips all generated outputs and other metadata.
+The program reads from standard input and outputs to standard output.
+Currently, the program offers has no options.
+
+This program is not designed to be used on its own and should be integrated with
+version control systems (see [below](#Integration) for instructions).  If you
+wish to run it manually, a simple call would be:
 
 ```sh
 cat my_notebook.nb | mathematica-notebook-filter > my_notebook_cleaned.nb
@@ -154,22 +157,27 @@ cat my_notebook.nb | mathematica-notebook-filter > my_notebook_cleaned.nb
 
 This program does *not* parse the Wolfram language in general and is specific to
 *full* Mathematica notebooks; thus it makes some fairly strong assumptions about
-the functions that will be found and their order.
+the functions that will be found and their order.  It only parses *one* Notebook
+at a time and will stop after the end of the first one, thus you cannot chain
+multiple Notebooks.  If an error is encountered during the parsing,
+`mathematica-notebook-filter` will exit with a non-zero code and the output will
+be left incomplete.
 
 It also should be re-iterated that the best way to commit Mathematica code to a
 version control system is to save the code in script files (`.wl` or `.m`).
-When doing so, Mathematica save the file in a very simple way, without the
-superfluous formatting information.  This unfortunately has the disadvantage
-that the Notebook interface is not available.
+When doing so, Mathematica save the file in a very simple format (essentially a
+plain text file), without the superfluous formatting information and without
+outputs.  This unfortunately has the disadvantage that the Notebook interface is
+not available.
 
 Also note that Mathematica notebooks allow you to copy-paste graphics (such as
 generated plots) and use them as inputs.  If you do so, the version control
 system will be forced to include the full plot in the diff, thereby defeating
-the point of this program.  An alternative to copy-pasting outputs is to store
-the output into a variable, or use `%` (and `%%`, `%%%`, ...) to refer to the
-previous output (though make sure to only use `%` within the one cell and not
-across cells as `%` refers to the last generated output, not the previous output
-in the Notebook order).
+the point of `mathematica-notebook-filter`.  An alternative to copy-pasting
+outputs is to store the output into a variable, or use `%` (and `%%`, `%%%`,
+...) to refer to the previous output (though make sure to only use `%` within
+the one cell and not across cells as `%` refers to the last generated output,
+not the previous output in the Notebook order).
 
 ## Installation
 
@@ -229,9 +237,7 @@ that causes the issue.
 Contributing
 ============
 
-Pull requests to improve compatibility with other versions (or to fix bugs)
-are very welcome.
-
-If you find a bug, please feel free to open an issue though please provide
-enough information to reproduce the bug or a minimal example of a Notebook
-file that causes the issue.
+Pull requests to improve compatibility with other versions (or to fix bugs) are
+very welcome.  If you find a bug, please feel free to open an issue and make
+sure to provide enough information to reproduce the bug or a minimal example of
+a Notebook file that causes the issue.
