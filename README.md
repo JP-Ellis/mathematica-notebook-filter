@@ -6,11 +6,14 @@ strips them of superfluous information so that they can be committed into
 version control systems more easily.  Instructions to integrate this program
 into version control systems can be found [below](#integration).
 
+[![Travis](https://img.shields.io/travis/JP-Ellis/mathematica-notebook-filter/master.svg)](https://travis-ci.org/JP-Ellis/mathematica-notebook-filter)
+[![Codecov](https://img.shields.io/codecov/c/github/JP-Ellis/mathematica-notebook-filter/master.svg)](https://codecov.io/gh/JP-Ellis/mathematica-notebook-filter)
+
 Licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
 
 *This program has not been rigorously tested.  It works for me on all my
 Notebooks, but there may still be some situations which have not been accounted
-for.  If you use this program, please let me know (whether it works or not).*
+for.  If you use this program, please let me know (both good and bad).*
 
 ## Introduction
 

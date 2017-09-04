@@ -15,4 +15,8 @@ keywords = ["vcs", "mathematica", "filter"]
 categories = ["command-line", "text-processing"]
 license = "GPLv3"
 
+[badges]
+travis-ci = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master" }
+codecov = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master", service = "github" }
+
 [dependencies]
