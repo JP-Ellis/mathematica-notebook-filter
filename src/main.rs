@@ -229,18 +229,20 @@ fn main() {
         exit(1);
     }
 
-    // Before exiting, we just need to overwrite the input file if the input and
-    // output files were identical (and not standard input/output).
+    // Before exiting, we just need to overwrite the input file.
     if use_temporary_file {
-        debug!(
-            "Moving {:?} => {}",
-            output_filename.clone().unwrap(),
-            matches.value_of("input").unwrap()
-        );
+        let input_filename = matches.value_of("input").unwrap();
+        let output_filename = output_filename.unwrap();
+        debug!("Moving {:?} => {}", output_filename, input_filename);
 
-        if let Err(e) = fs::rename(output_filename.unwrap(), matches.value_of("input").unwrap()) {
-            error!("Error when rename output file: {}.", e);
-            exit(1);
+        if let Err(e) = fs::copy(output_filename, input_filename) {
+            error!(
+                "Error when replacing original input with temporary outout: {}",
+                e
+            );
+            exit(1)
+        } else {
+            exit(0)
         }
     }
 }
