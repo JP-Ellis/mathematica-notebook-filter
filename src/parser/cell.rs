@@ -122,10 +122,10 @@ where
             (Some(p), None) => {
                 // Load everything up to the cell (which will include the
                 // preceding comma.
-                if !start_of_list {
-                    read_consume_output(input, &mut cell_buf, p)?;
-                } else {
+                if start_of_list {
                     input.consume(p);
+                } else {
+                    read_consume_output(input, &mut cell_buf, p)?;
                 }
                 if parse_cell(input, &mut cell_buf)? {
                     output.write_all(&cell_buf)?;
@@ -135,10 +135,10 @@ where
             (Some(p), Some(p2)) if p < p2 => {
                 // Load everything up to the cell (which will include the
                 // preceding comma.
-                if !start_of_list {
-                    read_consume_output(input, &mut cell_buf, p)?;
-                } else {
+                if start_of_list {
                     input.consume(p);
+                } else {
+                    read_consume_output(input, &mut cell_buf, p)?;
                 }
                 if parse_cell(input, &mut cell_buf)? {
                     output.write_all(&cell_buf)?;
@@ -280,7 +280,7 @@ where
 mod test {
     #[test]
     fn cell() {
-        // Output cells
+        // Output Cells
         ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &br#"Cell[123, "Output"]"#[..];
@@ -349,7 +349,6 @@ Foo"#
             [..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert_eq!(input, &b",\nFoo"[..]);
-        println!("Output: {}", String::from_utf8(output.clone()).unwrap());
         assert_eq!(
             output,
             &br#"Cell[
@@ -359,57 +358,98 @@ CellGroupData[{
 }, Open]]"#
                 [..]
         );
+
+        // Invalid Cells
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &br#"Foo Cell[123, "Input"]"#[..];
+        assert!(super::parse_cell(&mut input, &mut output).is_err());
+
+        // Although technically invalid from the Mathematica notebook, this is
+        // outputted fine.
+        let mut output = Vec::new();
+        let mut input = &b"Cell[]"[..];
+        assert!(super::parse_cell(&mut input, &mut output).is_ok());
+        assert!(input.is_empty());
+        assert_eq!(output, b"Cell[]");
     }
 
     #[test]
     fn cell_list() {
+        // Simple lists
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"{} Foo"[..];
+        assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
+        assert_eq!(input, b" Foo");
+        assert_eq!(output, b"{}");
+
+        let mut output = Vec::new();
+        let mut input = &b"{Cell[1]} Cell[2]"[..];
+        assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
+        assert_eq!(input, b" Cell[2]");
+        assert_eq!(output, b"{Cell[1]}");
+
+        // Combinations of Input and Output
+        ////////////////////////////////////////
+        // Valid list of 3 cells with anything from 0 to 3 output cells, in all
+        // possible configurations.
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1], Cell[2], Cell[3]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[1], Cell[2], Cell[3]}"#[..]);
+        assert_eq!(output, &br#"{Cell[1], Cell[2], Cell[3]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1, "Output"], Cell[2], Cell[3]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        println!("Output: {}", String::from_utf8(output.clone()).unwrap());
-        assert_eq!(output.as_slice(), &br#"{Cell[2], Cell[3]}"#[..]);
+        assert_eq!(output, &br#"{Cell[2], Cell[3]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1], Cell[2, "Output"], Cell[3]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[1], Cell[3]}"#[..]);
+        assert_eq!(output, &br#"{Cell[1], Cell[3]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1], Cell[2], Cell[3, "Output"]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[1], Cell[2]}"#[..]);
+        assert_eq!(output, &br#"{Cell[1], Cell[2]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1], Cell[2, "Output"], Cell[3, "Output"]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[1]}"#[..]);
+        assert_eq!(output, &br#"{Cell[1]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1, "Output"], Cell[2], Cell[3, "Output"]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[2]}"#[..]);
+        assert_eq!(output, &br#"{Cell[2]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1, "Output"], Cell[2, "Output"], Cell[3]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{Cell[3]}"#[..]);
+        assert_eq!(output, &br#"{Cell[3]}"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"{Cell[1, "Output"], Cell[2, "Output"], Cell[3, "Output"]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"{}"#[..]);
+        assert_eq!(output, &br#"{}"#[..]);
+
+        // Invalid Cell lists
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"Foo"[..];
+        assert!(super::parse_cell_list(&mut input, &mut output).is_err());
+
+        let mut output = Vec::new();
+        let mut input = &b"{Foo"[..];
+        assert!(super::parse_cell_list(&mut input, &mut output).is_err());
     }
 }

@@ -115,15 +115,25 @@ where
 mod test {
     #[test]
     fn cell_group_data_start() {
+        // Valid with Cell list as first argument
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"CellGroupData[{\nCell["[..];
         assert!(super::parse_cell_group_data_start(&mut input, &mut output).is_ok());
         assert_eq!(input, &b"{\nCell["[..]);
         assert_eq!(output, &b"CellGroupData["[..]);
+
+        // No cell list in first argument
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"CellGroupData[Cell["[..];
+        assert!(super::parse_cell_group_data_start(&mut input, &mut output).is_err());
     }
 
     #[test]
     fn cell_group_data_end() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b", Open], Cell[{}, \"Output\"]"[..];
         assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_ok());
@@ -131,18 +141,36 @@ mod test {
         assert_eq!(output.as_slice(), &b", Open]"[..]);
 
         let mut output = Vec::new();
+        let mut input = &b"], Cell[{}, \"Output\"]"[..];
+        assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_ok());
+        assert_eq!(input, &b", Cell[{}, \"Output\"]"[..]);
+        assert_eq!(output.as_slice(), &b"]"[..]);
+
+        // Invalid
+        ////////////////////////////////////////
+        let mut output = Vec::new();
         let mut input = &b"Open], Cell[{}, \"Output\"]"[..];
         assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_err());
     }
 
     #[test]
     fn cell_group_data() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}, Open], Foo"[..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_ok());
         assert_eq!(input, &b", Foo"[..]);
         assert_eq!(output, &b"CellGroupData[{Cell[1, \"Input\"]}, Open]"[..]);
 
+        let mut output = Vec::new();
+        let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}], Foo"[..];
+        assert!(super::parse_cell_group_data(&mut input, &mut output).is_ok());
+        assert_eq!(input, &b", Foo"[..]);
+        assert_eq!(output, &b"CellGroupData[{Cell[1, \"Input\"]}]"[..]);
+
+        // Invalid Cells
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"[..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
@@ -151,5 +179,6 @@ mod test {
         let mut input = &b"Foo[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"
             [..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
+
     }
 }

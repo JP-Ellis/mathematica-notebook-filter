@@ -44,9 +44,16 @@ where
             input.consume(pos);
             let mut out = Vec::new();
             input.read_until(b')', &mut out)?;
-            output.write_all(out.as_slice())?;
-            output.write_all(b"\n")?;
-            Ok(())
+            if out.last() != Some(&b')') {
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unable to locate the end content type specification.",
+                ))
+            } else {
+                output.write_all(out.as_slice())?;
+                output.write_all(b"\n")?;
+                Ok(())
+            }
         }
         None => {
             Err(io::Error::new(
@@ -134,10 +141,24 @@ mod test {
             output,
             &b"(* Content-type: application/vnd.wolfram.mathematica *)\n"[..]
         );
+
+        // Invalid due to no content type, or invalid form
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"(*** Wolfram Notebook File ***)\n\
+                           (* http://www.wolfram.com/nb *)"
+            [..];
+        assert!(super::parse_content_type(&mut input, &mut output).is_err());
+
+        let mut output = Vec::new();
+        let mut input = &b"(* Content-type: application/vnd.wolfram.mathematica"[..];
+        assert!(super::parse_content_type(&mut input, &mut output).is_err());
     }
 
     #[test]
     fn beginning_notebook() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"(* Other stuff *)\n\
                                   \n\
@@ -148,5 +169,12 @@ mod test {
         assert!(super::parse_beginning_notebook(&mut input, &mut output).is_ok());
         assert_eq!(input, b"\nNotebook[{\n\n");
         assert_eq!(output, &b"\n(* Beginning of Notebook Content *)\n"[..]);
+
+        // Invalid (no Notebook)
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"Cell[{\n\
+                           \n"[..];
+        assert!(super::parse_beginning_notebook(&mut input, &mut output).is_err());
     }
 }

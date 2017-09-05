@@ -118,15 +118,29 @@ where
 mod test {
     #[test]
     fn notebook_start() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"Notebook[{\n\nCell["[..];
         assert!(super::parse_notebook_start(&mut input, &mut output).is_ok());
         assert_eq!(input, b"{\n\nCell[");
         assert_eq!(&output, b"Notebook[");
+
+        // Invalid
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &b"Notebook[\n\nCell["[..];
+        assert!(super::parse_notebook_start(&mut input, &mut output).is_err());
+
+        let mut output = Vec::new();
+        let mut input = &b"Cell[\n\nCell["[..];
+        assert!(super::parse_notebook_start(&mut input, &mut output).is_err());
     }
 
     #[test]
     fn notebook_end() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &br#",
 WindowSize->{808, 911},
@@ -164,10 +178,18 @@ CellTagsIndex->{}
             output.as_slice(),
             &b"]\n(* End of Notebook Content *)\n"[..]
         );
+
+        // Invalid
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &br"WindowSize->{808, 911}"[..];
+        assert!(super::parse_notebook_end(&mut input, &mut output).is_err());
     }
 
     #[test]
     fn notebook() {
+        // Valid
+        ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &br#"
 (* Beginning of Notebook Content *)
@@ -195,6 +217,15 @@ StyleDefinitions->FrontEnd`FileName[{$RootDirectory, "home", "josh", "src",
 (* End of Notebook Content *)
 "#[..]
         );
+
+        // Invalid
+        ////////////////////////////////////////
+        let mut output = Vec::new();
+        let mut input = &br#"CellGroupData[{
+  Cell[1],
+  Cell[2]
+}]"#[..];
+        assert!(super::parse_notebook(&mut input, &mut output).is_err());
     }
 
 }

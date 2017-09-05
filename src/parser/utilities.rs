@@ -244,6 +244,11 @@ mod test {
         assert_eq!(args, vec![4, 14, 25]);
         assert_eq!(&s[args[0]..args[1]], b"{x, y, z},");
         assert_eq!(&s[args[1]..args[2]], b" {1, 2, 3}]");
+
+        // Without end
+        ////////////////////////////////////////
+        let mut input = &b"Foo[{x, y, z}, {1, 2, 3}"[..];
+        assert!(super::load_function(&mut input).is_err());
     }
 
     #[test]
@@ -278,6 +283,11 @@ mod test {
         assert_eq!(args, vec![10, 21]);
         assert_eq!(&s[..args[0]], b"{x, y, z},");
         assert_eq!(&s[args[0]..args[1]], b" {1, 2, 3}]");
+
+        // Without End
+        ////////////////////////////////////////
+        let mut input = &b"x, y, Foo[z], Bar[x, y, z]"[..];
+        assert!(super::load_rest_of_function(&mut input).is_err());
     }
 
     #[test]
