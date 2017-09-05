@@ -13,7 +13,7 @@ Licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
 
 *This program has not been rigorously tested.  It works for me on all my
 Notebooks, but there may still be some situations which have not been accounted
-for.  If you use this program, please let me know (both good and bad).*
+for.  If you use this program, please let me know (both good and bad feedback).*
 
 ## Introduction
 
@@ -144,16 +144,25 @@ notebooks as scripts files (with extension `.wl` or `.m`).
 
 `mathematica-notebook-filter` parses Mathematica notebook files (usually stored
 with the extension `.nb`) and strips all generated outputs and other metadata.
-The program reads from standard input and outputs to standard output.
-Currently, the program offers has no options.
-
-This program is not designed to be used on its own and should be integrated with
-version control systems (see [below](#Integration) for instructions).  If you
-wish to run it manually, a simple call would be:
+By default, the program reads from standard input and outputs to standard
+output.  Additional usage information can be obtained from
 
 ```sh
-cat my_notebook.nb | mathematica-notebook-filter > my_notebook_cleaned.nb
+mathematica-notebook-filter --help
 ```
+
+Although it is possible to use `mathematica-notebook-filter` manually, it is
+designed to be integrated with version control systems (see
+[below](#Integration) for instructions).  If you wish to run it manually, a
+simple call would be:
+
+```sh
+mathematica-notebook-filter -i my_notebook.nb -o my_notebook_cleaned.nb
+```
+
+If both input and output files are identical, the program will first output to a
+temporary file and only after successfully parsing the whole input will the
+original file be replaced.
 
 This program does *not* parse the Wolfram language in general and is specific to
 *full* Mathematica notebooks; thus it makes some fairly strong assumptions about
@@ -219,8 +228,7 @@ and to your `~/.gitconfig`:
 Pull requests to add instructions for other version control system are welcome.
 
 
-Disclaimer
-==========
+## Disclaimer
 
 The Wolfram Research organization unfortunately does not appear to offer any
 specification to their language or their file formats.  As a result, this filter
@@ -233,8 +241,7 @@ If you find a bug, please feel free to open an issue though please provide
 enough information to reproduce the bug or a minimal example of a Notebook file
 that causes the issue.
 
-Contributing
-============
+## Contributing
 
 Pull requests to improve compatibility with other versions (or to fix bugs) are
 very welcome.  If you find a bug, please feel free to open an issue and make
