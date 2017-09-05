@@ -157,11 +157,10 @@ cat my_notebook.nb | mathematica-notebook-filter > my_notebook_cleaned.nb
 
 This program does *not* parse the Wolfram language in general and is specific to
 *full* Mathematica notebooks; thus it makes some fairly strong assumptions about
-the functions that will be found and their order.  It only parses *one* Notebook
-at a time and will stop after the end of the first one, thus you cannot chain
-multiple Notebooks.  If an error is encountered during the parsing,
-`mathematica-notebook-filter` will exit with a non-zero code and the output will
-be left incomplete.
+the functions that will be found and their order.  It only parses a single
+Notebook at a time and will stop after the end of the first Notebook.  If an
+error is encountered during the parsing, `mathematica-notebook-filter` will exit
+with a non-zero code and the output will be left incomplete.
 
 It also should be re-iterated that the best way to commit Mathematica code to a
 version control system is to save the code in script files (`.wl` or `.m`).
