@@ -36,6 +36,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing CellGroupData.");
+
     if !check_start(input, b"CellGroupData[")? {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -56,6 +58,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing start of CellGroupData.");
+
     let brace_pos = {
         let buf = input.fill_buf()?;
         buf.iter().position(|&c| c == b'{')
@@ -95,6 +99,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing end of CellGroupData.");
+
     let (s, _) = load_rest_of_function(input)?;
     match s.first() {
         Some(&b',') | Some(&b']') => output.write_all(&s),

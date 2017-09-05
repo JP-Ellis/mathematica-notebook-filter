@@ -9,10 +9,13 @@ mod utilities;
 use self::header::parse_header;
 use self::notebook::parse_notebook;
 
+/// Parse the input and write to output the stripped Mathematica notebook.
 pub fn parse_input<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing input.");
+
     parse_header(input, output).and(parse_notebook(input, output))
 }

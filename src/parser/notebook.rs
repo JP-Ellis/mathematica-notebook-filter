@@ -35,6 +35,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing Notebook function.");
+
     let notebook_bytes = b"Notebook[";
     let pos = {
         let buf = input.fill_buf()?;
@@ -67,6 +69,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing start of Notebook function.");
+
     let pos = {
         let buf = input.fill_buf()?;
         buf.iter().position(|&c| c == b'{')
@@ -98,6 +102,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing end of Notebook function.");
+
     let (s, _) = load_rest_of_function(input)?;
     match s.first() {
         Some(&b',') | Some(&b']') => output.write_all(b"]\n(* End of Notebook Content *)\n"),

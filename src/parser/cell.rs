@@ -21,6 +21,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing cell list.");
+
     if !check_start(input, b"{")? {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -190,6 +192,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing Cell.");
+
     if !check_start(input, b"Cell[")? {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,

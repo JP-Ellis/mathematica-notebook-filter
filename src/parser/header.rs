@@ -9,6 +9,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing notebook header.");
+
     parse_content_type(input, output).and(parse_beginning_notebook(input, output))
 }
 
@@ -26,6 +28,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing notebook content-type.");
+
     let content_bytes = b"(* Content-type: ";
 
     let pos = {
@@ -68,6 +72,8 @@ where
     I: io::BufRead,
     O: io::Write,
 {
+    debug!("Parsing beginning of notebook specification.");
+
     let beginning_bytes = &b"(* Beginning of Notebook Content *)"[..];
 
     let pos = {

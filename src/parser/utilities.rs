@@ -15,6 +15,8 @@ pub fn load_function<I>(input: &mut I) -> Result<(Vec<u8>, Vec<usize>), io::Erro
 where
     I: io::BufRead,
 {
+    debug!("Loading function into array.");
+
     let mut s = Vec::new();
     let mut args = Vec::new();
 
@@ -100,6 +102,8 @@ pub fn load_rest_of_function<I>(input: &mut I) -> Result<(Vec<u8>, Vec<usize>), 
 where
     I: io::BufRead,
 {
+    debug!("Loading rest of function into array.");
+
     let mut s = Vec::new();
     let mut args = Vec::new();
 
