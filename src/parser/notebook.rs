@@ -1,9 +1,13 @@
 use std::io;
 
 use super::cell::parse_cell_list;
-use super::utilities::load_rest_of_function;
+use super::utilities::{load_rest_of_function, read_consume_output};
 
 /// Parse the `Notebook[]` function.
+///
+/// This function does not require the input to be at the start of the notebook,
+/// and instead will consume everything up to it.  It does expect that the
+/// `Notebook[]` function is coming up soon.
 ///
 /// Background
 /// ==========
@@ -31,61 +35,48 @@ where
     I: io::BufRead,
     O: io::Write,
 {
-    parse_notebook_start(input, output)
-        .and(parse_cell_list(input, output))
-        .and(parse_notebook_end(input, output))
-}
-
-/// Parse the start of the `Notebook[]` function.
-///
-/// The input will be consumed until the `Notebook` function is reached, and it
-/// will output everything from the `Notebook` function until the opening brace
-/// (but not including the opening brace).
-fn parse_notebook_start<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
-where
-    I: io::BufRead,
-    O: io::Write,
-{
-    let notebook_bytes = &b"Notebook["[..];
-
+    let notebook_bytes = b"Notebook[";
     let pos = {
         let buf = input.fill_buf()?;
         buf.windows(notebook_bytes.len()).position(
             |w| w == notebook_bytes,
         )
     };
-
     match pos {
         Some(pos) => {
             input.consume(pos);
-
-            let brace_pos = {
-                let buf = input.fill_buf()?;
-                buf.iter().position(|&c| c == b'{')
-            };
-
-            match brace_pos {
-                Some(brace_pos) => {
-                    {
-                        let buf = input.fill_buf()?;
-                        output.write_all(&buf[..brace_pos])?;
-                    }
-                    input.consume(brace_pos);
-                    Ok(())
-                }
-                None => {
-                    Err(io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
-                        "EOF reached before finding start of the list of cells within `Notebook[]`.",
-                    ))
-                }
-
-            }
+            parse_notebook_start(input, output)
+                .and(parse_cell_list(input, output))
+                .and(parse_notebook_end(input, output))
         }
         None => {
             Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
-                "EOF reached before finding the `Notebook[]` function.",
+                "Unable to locate the `Notebook[]` function.",
+            ))
+        }
+    }
+}
+
+/// Parse the start of the `Notebook[]` function.
+///
+/// This function assumes that the input is at the start of the Notebook
+/// function.
+fn parse_notebook_start<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
+where
+    I: io::BufRead,
+    O: io::Write,
+{
+    let pos = {
+        let buf = input.fill_buf()?;
+        buf.iter().position(|&c| c == b'{')
+    };
+    match pos {
+        Some(pos) => read_consume_output(input, output, pos),
+        None => {
+            Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "EOF reached before finding start of the list of cells within `Notebook[]`.",
             ))
         }
     }
@@ -95,14 +86,18 @@ where
 ///
 /// The input should be at the end of the list of cells, just after the closing
 /// brace.
+///
+/// Since `Notebook` does not appear to store any optional information that
+/// ought to be kept, this function simply consumes everything up to the closing
+/// bracket of the function.
+///
+/// Finally, it adds the information `(* End of Notebook Content *)` to the end
+/// of the output.
 fn parse_notebook_end<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
-    // It appears that all of the optional arguments at the end of the Notebook
-    // should probably be removed.  We just write the final closing bracket and
-    // the end of notebook content specification.
     let (s, _) = load_rest_of_function(input)?;
     match s.first() {
         Some(&b',') | Some(&b']') => output.write_all(b"]\n(* End of Notebook Content *)\n"),
@@ -118,11 +113,10 @@ mod test {
     #[test]
     fn notebook_start() {
         let mut output = Vec::new();
-        let mut input = &b"(* Beginning of Notebook Content *)\nNotebook[{\n\nCell["[..];
-
+        let mut input = &b"Notebook[{\n\nCell["[..];
         assert!(super::parse_notebook_start(&mut input, &mut output).is_ok());
-        assert_eq!(input, &b"{\n\nCell["[..]);
-        assert_eq!(output.as_slice(), &b"Notebook["[..]);
+        assert_eq!(input, b"{\n\nCell[");
+        assert_eq!(&output, b"Notebook[");
     }
 
     #[test]
@@ -163,6 +157,37 @@ CellTagsIndex->{}
         assert_eq!(
             output.as_slice(),
             &b"]\n(* End of Notebook Content *)\n"[..]
+        );
+    }
+
+    #[test]
+    fn notebook() {
+        let mut output = Vec::new();
+        let mut input = &br#"
+(* Beginning of Notebook Content *)
+Notebook[{
+  Cell[1],
+  Cell[2]
+},
+WindowSize->{1272, 1534},
+WindowMargins->{{4, Automatic}, {Automatic, 30}},
+FrontEndVersion->"11.1 for Linux x86 (64-bit) (April 18, 2017)",
+StyleDefinitions->FrontEnd`FileName[{$RootDirectory, "home", "josh", "src", 
+   "Mathematica"}, "Stylesheet.nb", CharacterEncoding -> "UTF-8"]
+]
+(* End of Notebook Content *)
+"#
+            [..];
+        assert!(super::parse_notebook(&mut input, &mut output).is_ok());
+        assert_eq!(input, &b"\n(* End of Notebook Content *)\n"[..]);
+        assert_eq!(
+            output,
+            &br#"Notebook[{
+  Cell[1],
+  Cell[2]
+}]
+(* End of Notebook Content *)
+"#[..]
         );
     }
 

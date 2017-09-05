@@ -1,9 +1,8 @@
 use std::cmp;
 use std::io;
-use std::io::Write;
 
 use super::cell_group_data::parse_cell_group_data;
-use super::utilities::load_function;
+use super::utilities::{load_function, read_consume_output, check_start};
 
 /// Parse a list of `Cell[]` of the form:
 ///
@@ -22,26 +21,23 @@ where
     I: io::BufRead,
     O: io::Write,
 {
-    let cell_bytes = &b"Cell["[..];
+    if !check_start(input, b"{")? {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Expected the start of a list of cells.",
+        ));
+    }
 
     // Note that although we could load the full list, it could actually be
-    // *very* long.  Instead, we'll keep parsing the list as we go.
+    // *very* long so we parse each cell individually.
 
-    // We write the opening brace of the list.  We just double check that the
-    // first character is an opening brace.  In order to keep some of the
-    // formatting, we'll also write up to the start of the first `Cell[]` (or to
-    // the end of the list if there are no cells).
+    // To make parsing the loop easier later, we'll output the opening brace now
+    // and everything up to the first cell, or up to and including the closing
+    // brace if there are no cells in the list.  In the latter case, we can exit
+    // the function early.
+    let cell_bytes = b"Cell[";
     let (next_cell, next_brace) = {
         let buf = input.fill_buf()?;
-        match buf.first() {
-            Some(&b'{') => (),
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Expected the start of a list of cells.",
-                ))
-            }
-        }
         (
             buf.windows(cell_bytes.len()).position(|w| w == cell_bytes),
             buf.iter().position(|&c| c == b'}'),
@@ -56,52 +52,42 @@ where
             ))
         }
         (None, Some(p)) => {
-            // End of list is coming up first (no cell in sight)
-            {
-                let buf = input.fill_buf()?;
-                output.write_all(&buf[..p + 1])?;
-            }
-            input.consume(p + 1);
+            // Write everything up to and including the next brace
+            read_consume_output(input, output, p + 1)?;
+            return Ok(());
+        }
+        (Some(p1), Some(p)) if p < p1 => {
+            // Write everything up to and including the next brace
+            read_consume_output(input, output, p + 1)?;
             return Ok(());
         }
         (Some(p), None) => {
-            // Cell is coming up
-            {
-                let buf = input.fill_buf()?;
-                output.write_all(&buf[..p])?;
-            }
-            input.consume(p);
+            // Write everything up to the next Cell
+            read_consume_output(input, output, p)?;
         }
         (Some(p), Some(p2)) if p < p2 => {
-            // Cell is coming up
-            {
-                let buf = input.fill_buf()?;
-                output.write_all(&buf[..p])?;
-            }
-            input.consume(p);
+            // Write everything up to the next Cell
+            read_consume_output(input, output, p)?;
         }
-        (Some(p1), Some(p)) if p < p1 => {
-            // End of list is coming
-            {
-                let buf = input.fill_buf()?;
-                output.write_all(&buf[..p + 1])?;
-            }
-            input.consume(p + 1);
-            return Ok(());
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Unexpected branch reached.",
+            ))
         }
-        _ => panic!("Unexpected branch encountered."),
     };
 
-    // At this stage, `input` should be at the start of the first `Cell[]`.
-
-    // We'll be keeping track of the previous separated (if any) since we don't
-    // know whether it should be outputted until the Cell has been parsed.  We
-    // also have to handle the start of the list (since we *do not* want to add
-    // an initial comma).
+    // At this stage, `input` is at the start of the first `Cell[]`, with the
+    // opening brace already having been outputted.  Note that if we happen to
+    // have omitted cells at the start of the list, we do not want to output a
+    // separating comma, so we must keep track of when we still are at the start
+    // of the list.
+    let mut cell_buf = Vec::new();
     let mut start_of_list = true;
-    let mut prev_separator = Vec::new();
     loop {
-        // Get the positions of the next `Cell[` and closing brace.
+        cell_buf.clear();
+
+        // Get the positions of the next `Cell[` and `}`.
         let (next_cell, next_brace) = {
             let buf = input.fill_buf()?;
             (
@@ -110,14 +96,10 @@ where
             )
         };
 
-        // Check whether we have a Cell first, or the end of the list and act as
-        // appropriate.  Since we don't know whether a Cell will generate any
-        // output until it has been parsed, we can't write the separator as we
-        // go (or we might double up on commas).
-        //
-        // Additionally, there's the special case of an empty list to handle,
-        // hence we keep track of the `prev_separator` which, at the start of
-        // the list, contains the opening brace.
+        // If we have a closing brace coming up first, we've reached the end of
+        // the list so we can output up to that and exit.  If instead we have a
+        // Cell coming up, we need to parse the Cell and check whether it will
+        // need to be outputted.
         match (next_cell, next_brace) {
             (None, None) => {
                 return Err(io::Error::new(
@@ -126,83 +108,59 @@ where
                 ))
             }
             (None, Some(p)) => {
-                // End of list is coming up first (no cell in sight)
-                {
-                    let buf = input.fill_buf()?;
-                    output.write_all(&buf[..p + 1])?;
-                }
-                input.consume(p + 1);
+                // Write everything up to and including the closing brace
+                read_consume_output(input, output, p + 1)?;
+                return Ok(());
+            }
+            (Some(p1), Some(p)) if p < p1 => {
+                // Write everything up to and including the closing brace
+                read_consume_output(input, output, p + 1)?;
                 return Ok(());
             }
             (Some(p), None) => {
-                // Cell is coming up
-                {
-                    let buf = input.fill_buf()?;
-                    prev_separator.write_all(&buf[..p])?;
+                // Load everything up to the cell (which will include the
+                // preceding comma.
+                if !start_of_list {
+                    read_consume_output(input, &mut cell_buf, p)?;
+                } else {
+                    input.consume(p);
                 }
-                input.consume(p);
-
-                let mut cell_buf = Vec::new();
-                match (parse_cell(input, &mut cell_buf)?, start_of_list) {
-                    (false, _) => {}
-                    (true, true) => {
-                        output.write_all(&cell_buf)?;
-                        start_of_list = false;
-                    }
-                    (true, false) => {
-                        output.write_all(&prev_separator)?;
-                        output.write_all(&cell_buf)?;
-                        start_of_list = false;
-                    }
+                if parse_cell(input, &mut cell_buf)? {
+                    output.write_all(&cell_buf)?;
+                    start_of_list = false;
                 }
             }
             (Some(p), Some(p2)) if p < p2 => {
-                // Cell is coming up
-                {
-                    let buf = input.fill_buf()?;
-                    prev_separator.write_all(&buf[..p])?;
+                // Load everything up to the cell (which will include the
+                // preceding comma.
+                if !start_of_list {
+                    read_consume_output(input, &mut cell_buf, p)?;
+                } else {
+                    input.consume(p);
                 }
-                input.consume(p);
-
-                let mut cell_buf = Vec::new();
-                match (parse_cell(input, &mut cell_buf)?, start_of_list) {
-                    (false, _) => {}
-                    (true, true) => {
-                        output.write_all(&cell_buf)?;
-                        start_of_list = false;
-                    }
-                    (true, false) => {
-                        output.write_all(&prev_separator)?;
-                        output.write_all(&cell_buf)?;
-                        start_of_list = false;
-                    }
+                if parse_cell(input, &mut cell_buf)? {
+                    output.write_all(&cell_buf)?;
+                    start_of_list = false;
                 }
             }
-            (Some(p1), Some(p)) if p < p1 => {
-                // End of list is coming
-                {
-                    let buf = input.fill_buf()?;
-                    output.write_all(&buf[..p + 1])?;
-                }
-                input.consume(p + 1);
-                return Ok(());
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unexpected branch reached.",
+                ))
             }
-            _ => panic!("Unexpected branch encountered."),
         }
-
-        prev_separator.clear();
     }
 }
 
 /// Parse a `Cell[]`, and only send it to the output if it is not an output
 /// cell.  This function also removes metadata associated with the cell.
 ///
-/// The input will be consumed until the first encountered Cell.
+/// The input must be at the start of the Cell function.
 ///
-/// If any of the input was passed on to the output, the `Ok` value `true`.  If
-/// not, the `Ok` value will be `false` and it is up to the calling function to
-/// correctly handle the addition or omission separating commas since the
-/// Wolfram language does not allow dangling commas.
+/// If anything was outputted by the function, the function will return `true`
+/// (and `false` otherwise) so that the parsing of list of cells can omit commas
+/// as appropriate.
 ///
 /// Background
 /// ==========
@@ -219,29 +177,24 @@ where
 /// Cell[contents, "style"]
 /// ```
 ///
-/// and optional arguments can be specified at the end.
+/// and optional arguments can be specified at the end.  We will assume that
+/// optional arguments are *only* used in the latter format.
+///
+/// The omitted styles are:
+///
+/// - Output
+/// - Print
+/// - Message
 pub fn parse_cell<I, O>(input: &mut I, output: &mut O) -> Result<bool, io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
-    let cell_bytes = &b"Cell["[..];
-
-    let pos = {
-        let buf = input.fill_buf()?;
-        buf.windows(cell_bytes.len()).position(|w| w == cell_bytes)
-    };
-
-    match pos {
-        Some(pos) => {
-            input.consume(pos);
-        }
-        None => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unable to locate the beginning of Notebook content specification.",
-            ));
-        }
+    if !check_start(input, b"Cell[")? {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Expected the start of a Cell[].",
+        ));
     }
 
     // The input is now at the start of the cell.  We load the full function
@@ -251,37 +204,32 @@ where
 
     // Check the second argument of `Cell[]` to see whether it is to be deleted
     // in which case we can ignore the Cell completely.
-    let to_ignore = vec![
-        &br#""Output""#[..],
-        &br#""Print""#[..],
-        &br#""Message""#[..],
-    ];
-    if num_args >= 2 &&
-        to_ignore.iter().any(|&cell_type| {
+    let to_ignore = vec![&b"\"Output\""[..], &b"\"Print\""[..], &b"\"Message\""[..]];
+    if num_args >= 2 {
+        let is_to_ignore = to_ignore.iter().any(|&cell_type| {
             cell_bytes[args[1]..args[2]].windows(cell_type.len()).any(
                 |w| {
                     w == cell_type
                 },
             )
-        })
-    {
-        return Ok(false);
+        });
+        if is_to_ignore {
+            return Ok(false);
+        }
     }
 
-    // At this stage, we know we are outputting the cell.  We can write the
-    // function call itself.
-    output.write_all(&cell_bytes[..args[0]])?;
+    // At this stage, we know we are outputting the cell.
 
     // Inspect the start of the first argument and see if it contains
-    // `CellGroupData`.  Note we don't want to go too far into the `Cell` as it
-    // has some user content.
-    let cell_group_data_bytes = &b"CellGroupData["[..];
+    // `CellGroupData`.  Because of formatting it need not be right at the start
+    // of the first argument, but we also want to avoid inspecting too far into
+    // the cell in case `CellGroupData[]` was inputted by the user.
+    let cell_group_data_bytes = b"CellGroupData[";
     let pos = cell_bytes[args[0]..cmp::min(args[1], args[0] + 2 * cell_group_data_bytes.len())]
         .windows(cell_group_data_bytes.len())
         .position(|w| w == cell_group_data_bytes);
 
-    // When outputting the arguments, we specifically omit the closing one.  We
-    // need to add it in later *if* there are arguments that follow.
+    // When outputting the arguments, we specifically omit the trailing comma.
     match (pos, num_args) {
         (_, 0) => {
             return Err(io::Error::new(
@@ -289,33 +237,29 @@ where
                 "Cell[] must have at least one argument.",
             ))
         }
-        (None, 1) => output.write_all(&cell_bytes[args[0]..args[1] - 1])?,
-        (None, _) => output.write_all(&cell_bytes[args[0]..args[2] - 1])?,
+        (None, 1) => output.write_all(&cell_bytes[..args[1] - 1])?,
+        (None, _) => output.write_all(&cell_bytes[..args[2] - 1])?,
         (Some(p), 1) => {
-            output.write_all(&cell_bytes[args[0]..args[0] + p])?;
-            // Need to double check whether we can pass a reference without it
-            // being modified, or whether it will cause an error with indexing later.
+            output.write_all(&cell_bytes[..args[0] + p])?;
             parse_cell_group_data(&mut &cell_bytes[args[0] + p..args[1] - 1], output)?;
         }
         (Some(p), _) => {
-            output.write_all(&cell_bytes[args[0]..args[0] + p])?;
-            // Need to double check whether we can pass a reference without it
-            // being modified, or whether it will cause an error with indexing later.
+            output.write_all(&cell_bytes[..args[0] + p])?;
             parse_cell_group_data(&mut &cell_bytes[args[0] + p..args[1] - 1], output)?;
             output.write_all(&cell_bytes[args[1] - 1..args[2] - 1])?;
         }
     };
 
-    // We have now outputed the first two arguments of `Cell`.  Options which we
-    // don't want will be excluded.
-    let to_exclude = vec![&b"CellChangeTimes"[..], &b"ExpressionUUID"[..]];
+    // We have now outputted the first two arguments of `Cell`.  It remains to
+    // parse the optional arguments.
+    let opt_to_exclude = vec![&b"CellChangeTimes"[..], &b"ExpressionUUID"[..]];
     for arg in 2..num_args {
-        if !to_exclude.iter().any(|&opt| {
+        let is_to_ignore = opt_to_exclude.iter().any(|&opt| {
             cell_bytes[args[arg]..args[arg + 1] - 1]
                 .windows(opt.len())
                 .any(|w| w == opt)
-        })
-        {
+        });
+        if !is_to_ignore {
             output.write_all(
                 &cell_bytes[args[arg] - 1..args[arg + 1] - 1],
             )?;
@@ -358,25 +302,25 @@ mod test {
         let mut input = &br#"Cell[123, "Input"]"#[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"Cell[123, "Input"]"#[..]);
+        assert_eq!(&output, br#"Cell[123, "Input"]"#);
 
         let mut output = Vec::new();
         let mut input = &br#"Cell[123, "Input", Foo->Bar]"#[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"Cell[123, "Input", Foo->Bar]"#[..]);
+        assert_eq!(&output, br#"Cell[123, "Input", Foo->Bar]"#);
 
         let mut output = Vec::new();
         let mut input = &br#"Cell[123, "Input", CellChangeTimes->123]"#[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"Cell[123, "Input"]"#[..]);
+        assert_eq!(&output, br#"Cell[123, "Input"]"#);
 
         let mut output = Vec::new();
         let mut input = &br#"Cell[123, "Input", CellChangeTimes->123, Foo->Bar]"#[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
-        assert_eq!(output.as_slice(), &br#"Cell[123, "Input", Foo->Bar]"#[..]);
+        assert_eq!(&output, br#"Cell[123, "Input", Foo->Bar]"#);
 
         // Cell with CellGroupData
         ////////////////////////////////////////
@@ -384,10 +328,10 @@ mod test {
         let mut input =
             &b"Cell[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}, Open]], Foo"[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
-        assert_eq!(input, &b", Foo"[..]);
+        assert_eq!(input, b", Foo");
         assert_eq!(
-            output.as_slice(),
-            &b"Cell[CellGroupData[{Cell[1, \"Input\"]}, Open]]"[..]
+            output,
+            &br#"Cell[CellGroupData[{Cell[1, "Input"]}, Open]]"#[..]
         );
 
         let mut output = Vec::new();
@@ -403,7 +347,7 @@ Foo"#
         assert_eq!(input, &b",\nFoo"[..]);
         println!("Output: {}", String::from_utf8(output.clone()).unwrap());
         assert_eq!(
-            output.as_slice(),
+            output,
             &br#"Cell[
 CellGroupData[{
   Cell[CellGroupData[{Cell[1, "Input"]}]],
@@ -425,6 +369,7 @@ CellGroupData[{
         let mut input = &br#"{Cell[1, "Output"], Cell[2], Cell[3]}"#[..];
         assert!(super::parse_cell_list(&mut input, &mut output).is_ok());
         assert!(input.is_empty());
+        println!("Output: {}", String::from_utf8(output.clone()).unwrap());
         assert_eq!(output.as_slice(), &br#"{Cell[2], Cell[3]}"#[..]);
 
         let mut output = Vec::new();

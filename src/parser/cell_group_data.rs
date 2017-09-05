@@ -1,12 +1,11 @@
 use std::io;
 
 use super::cell::parse_cell_list;
-use super::utilities::load_rest_of_function;
+use super::utilities::{load_rest_of_function, check_start};
 
 /// Parse a `CellGroupData`.
 ///
-/// This function will advance through the input until `CellGroupData` is
-/// reached.
+/// This function requires the input to be at the start of `CellGroupData`.
 ///
 /// Background
 /// ==========
@@ -37,59 +36,47 @@ where
     I: io::BufRead,
     O: io::Write,
 {
-    parse_cell_group_data_start(input, output)
-        .and(parse_cell_list(input, output))
-        .and(parse_cell_group_data_end(input, output))
+    if !check_start(input, b"CellGroupData[")? {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Expected the start of CellGroupData[].",
+        ))
+    } else {
+        parse_cell_group_data_start(input, output)
+            .and(parse_cell_list(input, output))
+            .and(parse_cell_group_data_end(input, output))
+    }
 }
 
-/// Parse the start of the `CellGroupData`
+/// Parse and consume the start of the `CellGroupData` up to (but not including)
+/// the opening brace of the list of cells, at which point `parse_cell_list`
+/// takes over.
 fn parse_cell_group_data_start<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
-    let cell_group_data_bytes = &b"CellGroupData["[..];
-
-    let pos = {
+    let brace_pos = {
         let buf = input.fill_buf()?;
-        buf.windows(cell_group_data_bytes.len()).position(|w| {
-            w == cell_group_data_bytes
-        })
+        buf.iter().position(|&c| c == b'{')
     };
 
-    match pos {
-        Some(pos) => {
-            input.consume(pos);
-
-            let brace_pos = {
+    match brace_pos {
+        Some(brace_pos) => {
+            {
                 let buf = input.fill_buf()?;
-                buf.iter().position(|&c| c == b'{')
-            };
-
-            match brace_pos {
-                Some(brace_pos) => {
-                    {
-                        let buf = input.fill_buf()?;
-                        output.write_all(&buf[..brace_pos])?;
-                    }
-                    input.consume(brace_pos);
-                    Ok(())
-                }
-                None => {
-                    Err(io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
-                        "EOF reached before finding start of the list of cells within `CellGroupData[]`.",
-                    ))
-                }
-
+                output.write_all(&buf[..brace_pos])?;
             }
+            input.consume(brace_pos);
+            Ok(())
         }
         None => {
             Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
-                "EOF reached before finding the `CellGroupData[]` function.",
+                "EOF reached before finding start of the list of cells within CellGroupData[].",
             ))
         }
+
     }
 }
 
@@ -99,19 +86,21 @@ where
 /// been parsed, and that the function is just after the closing brace (either
 /// at a comma, or closing bracket if there are no additional arguments to
 /// `CellGroupData`).
+///
+/// Since `CellGroupData` does not appear to store any optional information that
+/// ought to be stripped, this function simply consumes everything up to the
+/// closing bracket of the function.
 fn parse_cell_group_data_end<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
-    // It appears that there is nothing to remove from the `GroupDataCell`, so
-    // we just parse the rest of the function and output it.
     let (s, _) = load_rest_of_function(input)?;
     match s.first() {
         Some(&b',') | Some(&b']') => output.write_all(&s),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Expected to be right after an argument when parsing the end of `CellGroupData[]`.",
+            "Expected to be right after an argument when parsing the end of CellGroupData[].",
         )),
     }
 }
@@ -121,10 +110,10 @@ mod test {
     #[test]
     fn cell_group_data_start() {
         let mut output = Vec::new();
-        let mut input = &b"Cell[\nCellGroupData[{\nCell["[..];
+        let mut input = &b"CellGroupData[{\nCell["[..];
         assert!(super::parse_cell_group_data_start(&mut input, &mut output).is_ok());
         assert_eq!(input, &b"{\nCell["[..]);
-        assert_eq!(output.as_slice(), &b"CellGroupData["[..]);
+        assert_eq!(output, &b"CellGroupData["[..]);
     }
 
     #[test]
@@ -134,6 +123,10 @@ mod test {
         assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_ok());
         assert_eq!(input, &b", Cell[{}, \"Output\"]"[..]);
         assert_eq!(output.as_slice(), &b", Open]"[..]);
+
+        let mut output = Vec::new();
+        let mut input = &b"Open], Cell[{}, \"Output\"]"[..];
+        assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_err());
     }
 
     #[test]
@@ -142,9 +135,15 @@ mod test {
         let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}, Open], Foo"[..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_ok());
         assert_eq!(input, &b", Foo"[..]);
-        assert_eq!(
-            output.as_slice(),
-            &b"CellGroupData[{Cell[1, \"Input\"]}, Open]"[..]
-        );
+        assert_eq!(output, &b"CellGroupData[{Cell[1, \"Input\"]}, Open]"[..]);
+
+        let mut output = Vec::new();
+        let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"[..];
+        assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
+
+        let mut output = Vec::new();
+        let mut input = &b"Foo[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"
+            [..];
+        assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
     }
 }

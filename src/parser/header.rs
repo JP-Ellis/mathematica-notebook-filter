@@ -1,5 +1,17 @@
 use std::io;
 
+/// Parse the header of the Notebook file.
+///
+/// The header consists of everything up to the beginning of the Mathematica
+/// code, which in this case is the function `Notebook[]`.
+pub fn parse_header<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
+where
+    I: io::BufRead,
+    O: io::Write,
+{
+    parse_content_type(input, output).and(parse_beginning_notebook(input, output))
+}
+
 /// Parse the input until the content type specification is reached, and pass
 /// that on to the output.
 ///
@@ -9,12 +21,12 @@ use std::io;
 ///
 /// The consume everything up to (and including) the closing parenthesis.  The
 /// output include an extra new line after the content type.
-pub fn parse_content_type<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
+fn parse_content_type<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
 {
-    let content_bytes = &b"(* Content-type: "[..];
+    let content_bytes = b"(* Content-type: ";
 
     let pos = {
         let buf = input.fill_buf()?;
@@ -51,7 +63,7 @@ where
 /// The consume everything up to (and including) the closing parenthesis.  The
 /// output includes an extra new line before and after the beginning of notebook
 /// specification.
-pub fn parse_beginning_notebook<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
+fn parse_beginning_notebook<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
     O: io::Write,
@@ -93,9 +105,9 @@ mod test {
         let mut output = Vec::new();
         let mut input = &b"ABC(* Content-type: application/vnd.wolfram.mathematica *)\n"[..];
         assert!(super::parse_content_type(&mut input, &mut output).is_ok());
-        assert_eq!(input, &b"\n"[..]);
+        assert_eq!(input, b"\n");
         assert_eq!(
-            output.as_slice(),
+            output,
             &b"(* Content-type: application/vnd.wolfram.mathematica *)\n"[..]
         );
 
@@ -113,7 +125,7 @@ mod test {
             &b"\n\n(*** Wolfram Notebook File ***)\n(* http://www.wolfram.com/nb *)"[..]
         );
         assert_eq!(
-            output.as_slice(),
+            output,
             &b"(* Content-type: application/vnd.wolfram.mathematica *)\n"[..]
         );
     }
@@ -128,10 +140,7 @@ mod test {
                                   \n"
             [..];
         assert!(super::parse_beginning_notebook(&mut input, &mut output).is_ok());
-        assert_eq!(input, &b"\nNotebook[{\n\n"[..]);
-        assert_eq!(
-            output.as_slice(),
-            &b"\n(* Beginning of Notebook Content *)\n"[..]
-        );
+        assert_eq!(input, b"\nNotebook[{\n\n");
+        assert_eq!(output, &b"\n(* Beginning of Notebook Content *)\n"[..]);
     }
 }
