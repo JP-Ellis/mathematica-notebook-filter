@@ -21,11 +21,11 @@ where
     let mut depth = 0;
     let mut in_string = false;
     let mut idx = 0;
-    while depth > 0 || args.len() == 0 {
+    while depth > 0 || args.is_empty() {
         let consumed_length = {
             let buf = input.fill_buf()?;
 
-            if buf.len() == 0 {
+            if buf.is_empty() {
                 return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
                     "EOF reached before end of a function.",
@@ -36,7 +36,7 @@ where
             for &c in buf {
                 // Check if we've gone passed the end of the function; and if
                 // not, add the byte to the output.
-                if depth == 0 && args.len() > 0 {
+                if depth == 0 && !args.is_empty() {
                     break;
                 } else {
                     s.push(c);
@@ -48,7 +48,6 @@ where
                     (b'"', _, _) => in_string = !in_string,
 
                     (b',', 1, false) => args.push(idx),
-                    (b',', _, false) => {}
 
                     (b'[', 0, false) => {
                         depth += 1;
@@ -111,7 +110,7 @@ where
         let consumed_length = {
             let buf = input.fill_buf()?;
 
-            if buf.len() == 0 {
+            if buf.is_empty() {
                 return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
                     "EOF reached before end of a function.",
@@ -122,7 +121,7 @@ where
             for &c in buf {
                 // Check if we've gone passed the end of the function; and if
                 // not, add the byte to the output.
-                if depth == 0 && args.len() > 0 {
+                if depth == 0 && !args.is_empty() {
                     break;
                 } else {
                     s.push(c);
@@ -134,7 +133,6 @@ where
                     (b'"', _) => in_string = !in_string,
 
                     (b',', 1) => args.push(idx),
-                    (b',', _) => {}
 
                     (b'[', 0) => {
                         depth += 1;
@@ -164,6 +162,50 @@ where
     Ok((s, args))
 }
 
+/// Read, consume the specified number of bytes from the input, and output them
+/// to the specified output.
+pub fn read_consume_output<I, O>(input: &mut I, output: &mut O, len: usize) -> Result<(), io::Error>
+where
+    I: io::BufRead,
+    O: io::Write,
+{
+    {
+        let buf = input.fill_buf()?;
+        if buf.len() < len {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "EOF reached before being able to read specified number of bytes.",
+            ));
+        } else {
+            output.write_all(&buf[..len])?;
+        }
+    }
+    input.consume(len);
+
+    Ok(())
+}
+
+/// Check the start of the input and make sure it contains the specified bytes.
+///
+/// If the input is too short for the match, an error will be raised as opposed
+/// to an invalid match.
+pub fn check_start<I>(input: &mut I, pat: &[u8]) -> Result<bool, io::Error>
+where
+    I: io::BufRead,
+{
+    {
+        let buf = input.fill_buf()?;
+        if buf.len() < pat.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "EOF reached before being able to read specified number of bytes.",
+            ));
+        }
+
+        Ok(&buf[..pat.len()] == pat)
+    }
+}
+
 #[cfg(test)]
 mod test {
     #[test]
@@ -173,31 +215,31 @@ mod test {
         let mut input = &b"Foo[x, y, z] Bar[x, y, z]"[..];
         let (s, args) = super::load_function(&mut input).unwrap();
         assert_eq!(input, &b" Bar[x, y, z]"[..]);
-        assert_eq!(s, &b"Foo[x, y, z]"[..]);
+        assert_eq!(s, b"Foo[x, y, z]");
         assert_eq!(args, vec![4, 6, 9, 12]);
-        assert_eq!(&s[args[0]..args[1]], &b"x,"[..]);
-        assert_eq!(&s[args[1]..args[2]], &b" y,"[..]);
-        assert_eq!(&s[args[2]..args[3]], &b" z]"[..]);
+        assert_eq!(&s[args[0]..args[1]], b"x,");
+        assert_eq!(&s[args[1]..args[2]], b" y,");
+        assert_eq!(&s[args[2]..args[3]], b" z]");
 
         // Nested functions
         ////////////////////////////////////////
         let mut input = &b"Foo[Bar[Sin[x, y], z], P[x]]"[..];
         let (s, args) = super::load_function(&mut input).unwrap();
         assert!(input.is_empty());
-        assert_eq!(s, &b"Foo[Bar[Sin[x, y], z], P[x]]"[..]);
+        assert_eq!(s, b"Foo[Bar[Sin[x, y], z], P[x]]");
         assert_eq!(args, vec![4, 22, 28]);
-        assert_eq!(&s[args[0]..args[1]], &b"Bar[Sin[x, y], z],"[..]);
-        assert_eq!(&s[args[1]..args[2]], &b" P[x]]"[..]);
+        assert_eq!(&s[args[0]..args[1]], b"Bar[Sin[x, y], z],");
+        assert_eq!(&s[args[1]..args[2]], b" P[x]]");
 
         // With list
         ////////////////////////////////////////
         let mut input = &b"Foo[{x, y, z}, {1, 2, 3}]"[..];
         let (s, args) = super::load_function(&mut input).unwrap();
         assert!(input.is_empty());
-        assert_eq!(s, &b"Foo[{x, y, z}, {1, 2, 3}]"[..]);
+        assert_eq!(s, b"Foo[{x, y, z}, {1, 2, 3}]");
         assert_eq!(args, vec![4, 14, 25]);
-        assert_eq!(&s[args[0]..args[1]], &b"{x, y, z},"[..]);
-        assert_eq!(&s[args[1]..args[2]], &b" {1, 2, 3}]"[..]);
+        assert_eq!(&s[args[0]..args[1]], b"{x, y, z},");
+        assert_eq!(&s[args[1]..args[2]], b" {1, 2, 3}]");
     }
 
     #[test]
@@ -206,31 +248,56 @@ mod test {
         ////////////////////////////////////////
         let mut input = &b"x, y, z] Bar[x, y, z]"[..];
         let (s, args) = super::load_rest_of_function(&mut input).unwrap();
-        assert_eq!(input, &b" Bar[x, y, z]"[..]);
-        assert_eq!(s, &b"x, y, z]"[..]);
+        assert_eq!(input, b" Bar[x, y, z]");
+        assert_eq!(s, b"x, y, z]");
         assert_eq!(args, vec![2, 5, 8]);
-        assert_eq!(&s[..args[0]], &b"x,"[..]);
-        assert_eq!(&s[args[0]..args[1]], &b" y,"[..]);
-        assert_eq!(&s[args[1]..args[2]], &b" z]"[..]);
+        assert_eq!(&s[..args[0]], b"x,");
+        assert_eq!(&s[args[0]..args[1]], b" y,");
+        assert_eq!(&s[args[1]..args[2]], b" z]");
 
         // Nested functions
         ////////////////////////////////////////
         let mut input = &b"Bar[Sin[x, y], z], P[x]]"[..];
         let (s, args) = super::load_rest_of_function(&mut input).unwrap();
         assert!(input.is_empty());
-        assert_eq!(s, &b"Bar[Sin[x, y], z], P[x]]"[..]);
+        assert_eq!(s, b"Bar[Sin[x, y], z], P[x]]");
         assert_eq!(args, vec![18, 24]);
-        assert_eq!(&s[..args[0]], &b"Bar[Sin[x, y], z],"[..]);
-        assert_eq!(&s[args[0]..args[1]], &b" P[x]]"[..]);
+        assert_eq!(&s[..args[0]], b"Bar[Sin[x, y], z],");
+        assert_eq!(&s[args[0]..args[1]], b" P[x]]");
 
         // With list
         ////////////////////////////////////////
         let mut input = &b"{x, y, z}, {1, 2, 3}]"[..];
         let (s, args) = super::load_rest_of_function(&mut input).unwrap();
         assert!(input.is_empty());
-        assert_eq!(s, &b"{x, y, z}, {1, 2, 3}]"[..]);
+        assert_eq!(s, b"{x, y, z}, {1, 2, 3}]");
         assert_eq!(args, vec![10, 21]);
-        assert_eq!(&s[..args[0]], &b"{x, y, z},"[..]);
-        assert_eq!(&s[args[0]..args[1]], &b" {1, 2, 3}]"[..]);
+        assert_eq!(&s[..args[0]], b"{x, y, z},");
+        assert_eq!(&s[args[0]..args[1]], b" {1, 2, 3}]");
+    }
+
+    #[test]
+    fn read_consume_output() {
+        let mut input = &b"FooBar 1234567890"[..];
+        let mut output = Vec::new();
+        assert!(super::read_consume_output(&mut input, &mut output, 3).is_ok());
+        assert_eq!(input, b"Bar 1234567890");
+        assert_eq!(&output, b"Foo");
+
+        assert!(super::read_consume_output(&mut input, &mut output, 3).is_ok());
+        assert_eq!(input, b" 1234567890");
+        assert_eq!(&output, b"FooBar");
+
+        assert!(super::read_consume_output(&mut input, &mut output, 100).is_err());
+    }
+
+    #[test]
+    fn check_start() {
+        let mut input = &b"FooBar"[..];
+        assert!(super::check_start(&mut input, b"Foo").is_ok());
+        assert_eq!(super::check_start(&mut input, b"Foo").unwrap(), true);
+        assert!(super::check_start(&mut input, b"Bar").is_ok());
+        assert_eq!(super::check_start(&mut input, b"Bar").unwrap(), false);
+        assert!(super::check_start(&mut input, b"FooBar123").is_err());
     }
 }
