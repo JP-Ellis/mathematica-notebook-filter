@@ -4,7 +4,8 @@
 [Rust](https://www.rust-lang.org/) that parses Mathematica notebook files and
 strips them of superfluous information so that they can be committed into
 version control systems more easily.  Instructions to integrate this program
-into version control systems can be found [below](#integration).
+into version control systems can be found [below](#integration) and can be set
+up so that this is all done transparently without modifying the file on disk.
 
 [![Crates.io](https://img.shields.io/crates/v/mathematica-notebook-filter.svg)](https://crates.io/crates/mathematica-notebook-filter)
 [![Travis](https://img.shields.io/travis/JP-Ellis/mathematica-notebook-filter/master.svg)](https://travis-ci.org/JP-Ellis/mathematica-notebook-filter)
@@ -154,8 +155,13 @@ mathematica-notebook-filter --help
 
 Although it is possible to use `mathematica-notebook-filter` manually, it is
 designed to be integrated with version control systems (see
-[below](#Integration) for instructions).  If you wish to run it manually, a
-simple call would be:
+[below](#Integration) for instructions) such that Notebooks are first piped
+through the filter before the diffs are generated.  This is specifically
+designed so that original file is left untouched with all outputs and metadata
+remaining, and the filter effectively makes the version control system blind to
+the extra content.
+
+If you wish to run it manually, a simple call would be:
 
 ```sh
 mathematica-notebook-filter -i my_notebook.nb -o my_notebook_cleaned.nb
