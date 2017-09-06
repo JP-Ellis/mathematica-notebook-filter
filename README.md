@@ -6,6 +6,7 @@ strips them of superfluous information so that they can be committed into
 version control systems more easily.  Instructions to integrate this program
 into version control systems can be found [below](#integration).
 
+[![Crates.io](https://img.shields.io/crates/v/mathematica-notebook-filter.svg)](https://crates.io/crates/mathematica-notebook-filter)
 [![Travis](https://img.shields.io/travis/JP-Ellis/mathematica-notebook-filter/master.svg)](https://travis-ci.org/JP-Ellis/mathematica-notebook-filter)
 [![Codecov](https://img.shields.io/codecov/c/github/JP-Ellis/mathematica-notebook-filter/master.svg)](https://codecov.io/gh/JP-Ellis/mathematica-notebook-filter)
 
