@@ -74,7 +74,7 @@ where
         _ => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "Unexpected branch reached.",
+                "Unexpected branch reached.  This is a bug and should be reported.",
             ))
         }
     };
@@ -148,7 +148,7 @@ where
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "Unexpected branch reached.",
+                    "Unexpected branch reached.  This is a bug and should be reported.",
                 ))
             }
         }
