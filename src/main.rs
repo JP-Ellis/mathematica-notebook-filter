@@ -33,14 +33,6 @@ use clap::{App, Arg, AppSettings};
 
 mod parser;
 
-const ABOUT: &'static str = "
-mathematica-notebook-filter parses Mathematica notebook files and strips them of superfluous information so that they can be committed into version control systems more easily.
-
-By default, mathematica-notebook-filter will read from the standard input and write to the standard output.
-
-Project home page: https://github.com/JP-Ellis/mathematica-notebook-filter
-";
-
 /// Create the `clap::App` which will be used to parse the arguments.
 fn app() -> App<'static, 'static> {
     App::new("mathematica-notebook-filter")
@@ -48,7 +40,16 @@ fn app() -> App<'static, 'static> {
         .version(crate_version!())
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
-        .about(ABOUT)
+        .about("mathematica-notebook-filter parses Mathematica notebook files and strips them of superfluous information so that they can be committed into version control systems more easily.
+
+Project home page: https://github.com/JP-Ellis/mathematica-notebook-filter
+")
+        .long_about("mathematica-notebook-filter parses Mathematica notebook files and strips them of superfluous information so that they can be committed into version control systems more easily.
+
+By default, mathematica-notebook-filter is intended to be used as a pipe and will read from the standard input and write to the standard output.
+
+Project home page: https://github.com/JP-Ellis/mathematica-notebook-filter
+")
         .arg(
             Arg::with_name("input")
                 .short("i")
@@ -60,10 +61,7 @@ fn app() -> App<'static, 'static> {
                 .allow_hyphen_values(true)
                 .help("Input file name, or standard input if not provided.")
                 .long_help(
-                    "Specify the input file to the Mathematica Notebook which\
-                     will parsed.  This value is option and will default to the\
-                     standard input.  The standard input can be explicitly\
-                     specified using the special file name '-'.",
+"Specify the input file to the Mathematica Notebook which will parsed.  This value is option and will default to the standard input.  The standard input can be explicitly specified using the special file name '-'.",
                 ),
         )
         .arg(
@@ -77,20 +75,11 @@ fn app() -> App<'static, 'static> {
                 .allow_hyphen_values(true)
                 .help("Output file name, or standard output if not provided.")
                 .long_help(
-                    "Specify the output file to which the Mathematica Notebook\
-                     stripped of all output will be written.  This value is\
-                     option and will default to the standard output.  The\
-                     standard output can be explicitly specified using the\
-                     special file name '-'.
+"Specify the output file to which the Mathematica Notebook stripped of all output will be written.  This value is option and will default to the standard output.  The standard output can be explicitly specified using the special file name '-'.
 
-\
-                     If the input and output files are both the same, the output\
-                     will be written to a temporary file first before\
-                     overwriting the input file.
+If the input and output files are both the same, the output will be written to a temporary file first before overwriting the input file.
 
-\
-                     If the output file already exists, the contents of the file\
-                     will be overwritten.",
+If the output file already exists, the contents of the file will be overwritten.",
                 ),
         )
         .arg(
@@ -101,10 +90,7 @@ fn app() -> App<'static, 'static> {
                 .takes_value(false)
                 .help("Increase the verbosity of errors.")
                 .long_help(
-                    "Increase the verbosity of errors.  The errors are\
-                     outputted to the standard error stream and thus do not\
-                     appear in the output.  This option can be specified\
-                     multiple times for increasing levels of verbosity.",
+"Increase the verbosity of errors.  The errors are outputted to the standard error stream and thus do not appear in the output.  This option can be specified multiple times for increasing levels of verbosity.",
                 ),
         )
 }
