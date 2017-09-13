@@ -208,7 +208,12 @@ where
 
     // Check the second argument of `Cell[]` to see whether it is to be deleted
     // in which case we can ignore the Cell completely.
-    let to_ignore = vec![&b"\"Output\""[..], &b"\"Print\""[..], &b"\"Message\""[..]];
+    let to_ignore = vec![
+        &b"\"Message\""[..],
+        &b"\"Output\""[..],
+        &b"\"PrintTemporary\""[..],
+        &b"\"Print\""[..],
+    ];
     if num_args >= 2 {
         let is_to_ignore = to_ignore.iter().any(|&cell_type| {
             cell_bytes[args[1]..args[2]].windows(cell_type.len()).any(
