@@ -338,10 +338,7 @@ mod test {
             &b"Cell[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}, Open]], Foo"[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert_eq!(input, b", Foo");
-        assert_eq!(
-            output,
-            &br#"Cell[CellGroupData[{Cell[1, "Input"]}, Open]]"#[..]
-        );
+        assert_eq!(output, &br#"Cell[CellGroupData[{Cell[1, "Input"]}]]"#[..]);
 
         let mut output = Vec::new();
         let mut input = &br#"Cell[
@@ -360,7 +357,7 @@ Foo"#
 CellGroupData[{
   Cell[CellGroupData[{Cell[1, "Input"]}]],
   Cell[3, "Input"]
-}, Open]]"#
+}]]"#
                 [..]
         );
 

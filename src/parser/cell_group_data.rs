@@ -91,9 +91,8 @@ where
 /// at a comma, or closing bracket if there are no additional arguments to
 /// `CellGroupData`).
 ///
-/// Since `CellGroupData` does not appear to store any optional information that
-/// ought to be stripped, this function simply consumes everything up to the
-/// closing bracket of the function.
+/// It appears CellGroupData only stores data about which cells are open and
+/// closed, so we will strip them and leave only the default (i.e. open).
 fn parse_cell_group_data_end<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
     I: io::BufRead,
@@ -103,7 +102,7 @@ where
 
     let (s, _) = load_rest_of_function(input)?;
     match s.first() {
-        Some(&b',') | Some(&b']') => output.write_all(&s),
+        Some(&b',') | Some(&b']') => output.write_all(&b"]"[..]),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Expected to be right after an argument when parsing the end of CellGroupData[].",
@@ -138,7 +137,7 @@ mod test {
         let mut input = &b", Open], Cell[{}, \"Output\"]"[..];
         assert!(super::parse_cell_group_data_end(&mut input, &mut output).is_ok());
         assert_eq!(input, &b", Cell[{}, \"Output\"]"[..]);
-        assert_eq!(output.as_slice(), &b", Open]"[..]);
+        assert_eq!(output.as_slice(), &b"]"[..]);
 
         let mut output = Vec::new();
         let mut input = &b"], Cell[{}, \"Output\"]"[..];
@@ -161,7 +160,7 @@ mod test {
         let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}, Open], Foo"[..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_ok());
         assert_eq!(input, &b", Foo"[..]);
-        assert_eq!(output, &b"CellGroupData[{Cell[1, \"Input\"]}, Open]"[..]);
+        assert_eq!(output, &b"CellGroupData[{Cell[1, \"Input\"]}]"[..]);
 
         let mut output = Vec::new();
         let mut input = &b"CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]}], Foo"[..];
