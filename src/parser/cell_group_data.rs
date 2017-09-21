@@ -91,7 +91,7 @@ where
 /// at a comma, or closing bracket if there are no additional arguments to
 /// `CellGroupData`).
 ///
-/// It appears CellGroupData only stores data about which cells are open and
+/// It appears `CellGroupData` only stores data about which cells are open and
 /// closed, so we will strip them and leave only the default (i.e. open).
 fn parse_cell_group_data_end<I, O>(input: &mut I, output: &mut O) -> Result<(), io::Error>
 where
