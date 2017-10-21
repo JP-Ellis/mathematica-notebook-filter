@@ -1,6 +1,6 @@
 [package]
 name = "mathematica-notebook-filter"
-version = "0.1.3-dev"
+version = "0.1.3"
 authors = ["JP-Ellis <josh@jpellis.me>"]
 
 readme = "README.md"
