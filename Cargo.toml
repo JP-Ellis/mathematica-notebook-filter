@@ -24,8 +24,8 @@ travis-ci = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "mas
 codecov = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master", service = "github" }
 
 [dependencies]
-atty = "^0.2"
-clap = "=2.26.0"
-tempfile = "2.1.6"
-log = "^0.3.8"
-env_logger = "^0.4.3"
+atty = "0.2"
+clap = "2"
+tempfile = "2"
+log = "0.3"
+env_logger = "0.4"
