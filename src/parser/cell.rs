@@ -2,7 +2,7 @@ use std::cmp;
 use std::io;
 
 use super::cell_group_data::parse_cell_group_data;
-use super::utilities::{load_function, read_consume_output, check_start};
+use super::utilities::{check_start, load_function, read_consume_output};
 
 /// Parse a list of `Cell[]` of the form:
 ///
@@ -216,11 +216,9 @@ where
     ];
     if num_args >= 2 {
         let is_to_ignore = to_ignore.iter().any(|&cell_type| {
-            cell_bytes[args[1]..args[2]].windows(cell_type.len()).any(
-                |w| {
-                    w == cell_type
-                },
-            )
+            cell_bytes[args[1]..args[2]]
+                .windows(cell_type.len())
+                .any(|w| w == cell_type)
         });
         if is_to_ignore {
             return Ok(false);
@@ -269,9 +267,7 @@ where
                 .any(|w| w == opt)
         });
         if !is_to_ignore {
-            output.write_all(
-                &cell_bytes[args[arg] - 1..args[arg + 1] - 1],
-            )?;
+            output.write_all(&cell_bytes[args[arg] - 1..args[arg + 1] - 1])?;
         }
     }
 
@@ -347,8 +343,7 @@ CellGroupData[{
   Cell[3, "Input"],
   Cell[4, "Output"]
 }, Open]],
-Foo"#
-            [..];
+Foo"#[..];
         assert!(super::parse_cell(&mut input, &mut output).is_ok());
         assert_eq!(input, &b",\nFoo"[..]);
         assert_eq!(
@@ -357,8 +352,7 @@ Foo"#
 CellGroupData[{
   Cell[CellGroupData[{Cell[1, "Input"]}]],
   Cell[3, "Input"]
-}]]"#
-                [..]
+}]]"#[..]
         );
 
         // Invalid Cells

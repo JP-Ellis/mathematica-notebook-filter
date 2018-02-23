@@ -34,9 +34,8 @@ where
 
     let pos = {
         let buf = input.fill_buf()?;
-        buf.windows(content_bytes.len()).position(
-            |w| w == content_bytes,
-        )
+        buf.windows(content_bytes.len())
+            .position(|w| w == content_bytes)
     };
 
     match pos {
@@ -55,12 +54,10 @@ where
                 Ok(())
             }
         }
-        None => {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unable to locate the content type specification near the start of the file.",
-            ))
-        }
+        None => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Unable to locate the content type specification near the start of the file.",
+        )),
     }
 }
 
@@ -85,9 +82,8 @@ where
 
     let pos = {
         let buf = input.fill_buf()?;
-        buf.windows(beginning_bytes.len()).position(
-            |w| w == beginning_bytes,
-        )
+        buf.windows(beginning_bytes.len())
+            .position(|w| w == beginning_bytes)
     };
 
     match pos {
@@ -100,12 +96,10 @@ where
             output.write_all(b"\n")?;
             Ok(())
         }
-        None => {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unable to locate the beginning of Notebook content specification.",
-            ))
-        }
+        None => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Unable to locate the beginning of Notebook content specification.",
+        )),
     }
 }
 
@@ -130,8 +124,7 @@ mod test {
         let mut input = &b"(* Content-type: application/vnd.wolfram.mathematica *)\n\
                                  \n\
                                  (*** Wolfram Notebook File ***)\n\
-                                 (* http://www.wolfram.com/nb *)"
-            [..];
+                                 (* http://www.wolfram.com/nb *)"[..];
         assert!(super::parse_content_type(&mut input, &mut output).is_ok());
         assert_eq!(
             input,
@@ -146,8 +139,7 @@ mod test {
         ////////////////////////////////////////
         let mut output = Vec::new();
         let mut input = &b"(*** Wolfram Notebook File ***)\n\
-                           (* http://www.wolfram.com/nb *)"
-            [..];
+                           (* http://www.wolfram.com/nb *)"[..];
         assert!(super::parse_content_type(&mut input, &mut output).is_err());
 
         let mut output = Vec::new();
@@ -164,8 +156,7 @@ mod test {
                                   \n\
                                   (* Beginning of Notebook Content *)\n\
                                   Notebook[{\n\
-                                  \n"
-            [..];
+                                  \n"[..];
         assert!(super::parse_beginning_notebook(&mut input, &mut output).is_ok());
         assert_eq!(input, b"\nNotebook[{\n\n");
         assert_eq!(output, &b"\n(* Beginning of Notebook Content *)\n"[..]);

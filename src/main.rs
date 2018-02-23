@@ -29,7 +29,7 @@ use std::io::prelude::*;
 use std::path;
 use std::process::exit;
 
-use clap::{App, Arg, AppSettings};
+use clap::{App, AppSettings, Arg};
 
 mod parser;
 
@@ -104,9 +104,7 @@ fn initialize_logger(level: u64) {
         2 => log_builder.filter(None, log::LogLevelFilter::Info),
         3 | _ => log_builder.filter(None, log::LogLevelFilter::Debug),
     };
-    log_builder.format(|record: &log::LogRecord| {
-        format!("{}: {}", record.level(), record.args())
-    });
+    log_builder.format(|record: &log::LogRecord| format!("{}: {}", record.level(), record.args()));
     if let Err(e) = log_builder.init() {
         eprintln!("Error when initializing the logger: {}.", e);
         exit(1);
@@ -124,8 +122,8 @@ fn main() {
     // Check if the input and output files are the same (and not both standard
     // input/output) as we need to take care of not overwriting the input as we
     // write to it.
-    let use_temporary_file = matches.value_of("input") != Some("-") &&
-        matches.value_of("input") == matches.value_of("output");
+    let use_temporary_file = matches.value_of("input") != Some("-")
+        && matches.value_of("input") == matches.value_of("output");
 
     // We initialize stdin and stdout here so that they don't go out of scope
     // (even if they don't get used).  This doesn't seem like the best way of
@@ -184,8 +182,7 @@ fn main() {
                 (Box::new(output_file), Some(p))
             }
 
-            (Some("-"), false) |
-            (None, false) => {
+            (Some("-"), false) | (None, false) => {
                 debug!("Writing to standard output.");
 
                 (Box::new(stdout.lock()), None)
