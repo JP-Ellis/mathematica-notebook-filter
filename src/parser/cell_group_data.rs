@@ -1,7 +1,7 @@
 use std::io;
 
 use super::cell::parse_cell_list;
-use super::utilities::{load_rest_of_function, check_start};
+use super::utilities::{check_start, load_rest_of_function};
 
 /// Parse a `CellGroupData`.
 ///
@@ -74,13 +74,10 @@ where
             input.consume(brace_pos);
             Ok(())
         }
-        None => {
-            Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "EOF reached before finding start of the list of cells within CellGroupData[].",
-            ))
-        }
-
+        None => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "EOF reached before finding start of the list of cells within CellGroupData[].",
+        )),
     }
 }
 
@@ -175,9 +172,8 @@ mod test {
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
 
         let mut output = Vec::new();
-        let mut input = &b"Foo[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"
-            [..];
+        let mut input =
+            &b"Foo[CellGroupData[{Cell[1, \"Input\"], Cell[2, \"Output\"]} Open], Foo"[..];
         assert!(super::parse_cell_group_data(&mut input, &mut output).is_err());
-
     }
 }

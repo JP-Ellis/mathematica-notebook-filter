@@ -83,8 +83,7 @@ brown fox
 over   	     
    the       
 lazy dog.    
-"#
-            [..];
+"#[..];
 
         {
             let mut wc = WhitespaceCleaner::new(&mut output);

@@ -40,9 +40,8 @@ where
     let notebook_bytes = b"Notebook[";
     let pos = {
         let buf = input.fill_buf()?;
-        buf.windows(notebook_bytes.len()).position(
-            |w| w == notebook_bytes,
-        )
+        buf.windows(notebook_bytes.len())
+            .position(|w| w == notebook_bytes)
     };
     match pos {
         Some(pos) => {
@@ -51,12 +50,10 @@ where
                 .and(parse_cell_list(input, output))
                 .and(parse_notebook_end(input, output))
         }
-        None => {
-            Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Unable to locate the `Notebook[]` function.",
-            ))
-        }
+        None => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Unable to locate the `Notebook[]` function.",
+        )),
     }
 }
 
@@ -77,12 +74,10 @@ where
     };
     match pos {
         Some(pos) => read_consume_output(input, output, pos),
-        None => {
-            Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "EOF reached before finding start of the list of cells within `Notebook[]`.",
-            ))
-        }
+        None => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "EOF reached before finding start of the list of cells within `Notebook[]`.",
+        )),
     }
 }
 
@@ -157,8 +152,7 @@ CellTagsIndex->{}
 *)
 (*CellTagsIndex
 CellTagsIndex->{}
-*)"#
-            [..];
+*)"#[..];
         assert!(super::parse_notebook_end(&mut input, &mut output).is_ok());
         assert_eq!(
             input,
@@ -171,8 +165,7 @@ CellTagsIndex->{}
 *)
 (*CellTagsIndex
 CellTagsIndex->{}
-*)"#
-                [..]
+*)"#[..]
         );
         assert_eq!(
             output.as_slice(),
@@ -204,8 +197,7 @@ StyleDefinitions->FrontEnd`FileName[{$RootDirectory, "home", "josh", "src",
    "Mathematica"}, "Stylesheet.nb", CharacterEncoding -> "UTF-8"]
 ]
 (* End of Notebook Content *)
-"#
-            [..];
+"#[..];
         assert!(super::parse_notebook(&mut input, &mut output).is_ok());
         assert_eq!(input, &b"\n(* End of Notebook Content *)\n"[..]);
         assert_eq!(
