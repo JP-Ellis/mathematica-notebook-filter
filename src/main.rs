@@ -17,9 +17,9 @@
 extern crate atty;
 #[macro_use]
 extern crate clap;
-extern crate env_logger;
 #[macro_use]
 extern crate log;
+extern crate stderrlog;
 extern crate tempfile;
 
 use std::fs;
@@ -97,18 +97,14 @@ If the output file already exists, the contents of the file will be overwritten.
 
 /// Initialize the logger based on the desired level of verbosity.
 fn initialize_logger(level: u64) {
-    let mut log_builder = env_logger::LogBuilder::new();
-    match level {
-        0 => log_builder.filter(None, log::LogLevelFilter::Error),
-        1 => log_builder.filter(None, log::LogLevelFilter::Warn),
-        2 => log_builder.filter(None, log::LogLevelFilter::Info),
-        3 | _ => log_builder.filter(None, log::LogLevelFilter::Debug),
-    };
-    log_builder.format(|record: &log::LogRecord| format!("{}: {}", record.level(), record.args()));
-    if let Err(e) = log_builder.init() {
+    if let Err(e) = stderrlog::new()
+        .module(module_path!())
+        .verbosity(level as usize)
+        .init()
+    {
         eprintln!("Error when initializing the logger: {}.", e);
         exit(1);
-    }
+    };
 
     debug!("Verbosity set to Debug.");
 }
