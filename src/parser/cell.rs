@@ -71,12 +71,7 @@ where
             // Write everything up to the next Cell
             read_consume_output(input, output, p)?;
         }
-        _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unexpected branch reached.  This is a bug and should be reported.",
-            ))
-        }
+        _ => unreachable!("Unexpected branch reached.  This is a bug and should be reported."),
     };
 
     // At this stage, `input` is at the start of the first `Cell[]`, with the
@@ -145,12 +140,7 @@ where
                     start_of_list = false;
                 }
             }
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Unexpected branch reached.  This is a bug and should be reported.",
-                ))
-            }
+            _ => unreachable!("Unexpected branch reached.  This is a bug and should be reported."),
         }
     }
 }
