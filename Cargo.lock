@@ -92,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "mathematica-notebook-filter"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "atty 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
