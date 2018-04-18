@@ -1,5 +1,7 @@
 language: rust
 
+sudo: required
+
 rust:
   - stable
   - beta
@@ -12,6 +14,8 @@ matrix:
 env:
   global:
   - RUSTFLAGS="-C link-dead-code"
+
+cache: cargo
 
 addons:
   apt:
