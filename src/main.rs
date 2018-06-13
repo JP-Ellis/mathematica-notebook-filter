@@ -24,8 +24,8 @@ extern crate tempfile;
 
 use std::fs;
 use std::io;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::path;
 use std::process::exit;
 

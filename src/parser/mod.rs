@@ -1,9 +1,9 @@
 use std::io;
 
-mod header;
-mod notebook;
 mod cell;
 mod cell_group_data;
+mod header;
+mod notebook;
 mod utilities;
 mod whitespace;
 
