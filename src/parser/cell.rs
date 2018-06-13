@@ -249,7 +249,11 @@ where
 
     // We have now outputted the first two arguments of `Cell`.  It remains to
     // parse the optional arguments.
-    let opt_to_exclude = vec![&b"CellChangeTimes"[..], &b"ExpressionUUID"[..]];
+    let opt_to_exclude = vec![
+        &b"CellChangeTimes"[..],
+        &b"ExpressionUUID"[..],
+        &b"CellLabel"[..],
+    ];
     for arg in 2..num_args {
         let is_to_ignore = opt_to_exclude.iter().any(|&opt| {
             cell_bytes[args[arg]..args[arg + 1] - 1]
