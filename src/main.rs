@@ -14,6 +14,12 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//! `mathematica-notebook-filter` parses Mathematica notebook files and strips
+//! them of superfluous information so that they can be committed into version
+//! control systems more easily.
+//!
+//! Project home page: https://github.com/JP-Ellis/mathematica-notebook-filter
+
 extern crate atty;
 #[macro_use]
 extern crate clap;

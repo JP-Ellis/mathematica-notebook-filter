@@ -4,14 +4,14 @@ use std::io;
 use super::cell_group_data::parse_cell_group_data;
 use super::utilities::{check_start, load_function, read_consume_output};
 
-const CELL_OPT_TO_IGNORE: &'static [&'static [u8]; 4] = &[
+const CELL_OPT_TO_IGNORE: [&[u8]; 4] = [
     b"CellChangeTimes",
     b"ExpressionUUID",
     b"CellLabel",
     b"EmphasizeSyntaxErrors",
 ];
 
-const CELL_STYLE_TO_IGNORE: &'static [&'static [u8]; 4] = &[
+const CELL_STYLE_TO_IGNORE: [&[u8]; 4] = [
     b"\"Message\"",
     b"\"Output\"",
     b"\"PrintTemporary\"",
