@@ -19,6 +19,8 @@ categories = ["command-line-utilities", "text-processing"]
 
 license = "GPL-3.0"
 
+edition = "2018"
+
 [badges]
 travis-ci = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master" }
 codecov = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master", service = "github" }
