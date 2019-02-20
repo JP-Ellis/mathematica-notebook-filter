@@ -1,5 +1,6 @@
-# Exit on any error
-set -ux
+#!/usr/bin/bash
+
+set -eux
 
 install_kcov() {
     set -e

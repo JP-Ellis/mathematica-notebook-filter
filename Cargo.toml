@@ -1,6 +1,6 @@
 [package]
 name = "mathematica-notebook-filter"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["JP-Ellis <josh@jpellis.me>"]
 
 readme = "README.md"
@@ -19,6 +19,8 @@ categories = ["command-line-utilities", "text-processing"]
 
 license = "GPL-3.0"
 
+edition = "2018"
+
 [badges]
 travis-ci = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master" }
 codecov = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "master", service = "github" }
@@ -28,4 +30,4 @@ atty = "0.2.11"
 clap = { version = "2.32.0", features = ["wrap_help"] }
 log = "0.4.6"
 stderrlog = "0.4.1"
-tempfile = "3.0.4"
+tempfile = "3.0.7"

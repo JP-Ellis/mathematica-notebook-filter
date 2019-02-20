@@ -37,7 +37,7 @@ where
             // the end of the line and not the end of the buffer.
             if self.line_buffer.as_bytes().last() == Some(&0xA) {
                 {
-                    let s = self.line_buffer.trim_right();
+                    let s = self.line_buffer.trim_end();
                     self.output.write_all(s.as_bytes())?;
                     self.output.write_all(&[0xA])?;
                 }

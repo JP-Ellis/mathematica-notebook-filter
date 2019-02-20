@@ -4,6 +4,20 @@ use std::io;
 use super::cell_group_data::parse_cell_group_data;
 use super::utilities::{check_start, load_function, read_consume_output};
 
+const CELL_OPT_TO_IGNORE: [&[u8]; 4] = [
+    b"CellChangeTimes",
+    b"ExpressionUUID",
+    b"CellLabel",
+    b"EmphasizeSyntaxErrors",
+];
+
+const CELL_STYLE_TO_IGNORE: [&[u8]; 4] = [
+    b"\"Message\"",
+    b"\"Output\"",
+    b"\"PrintTemporary\"",
+    b"\"Print\"",
+];
+
 /// Parse a list of `Cell[]` of the form:
 ///
 /// ```mathematica
@@ -51,7 +65,7 @@ where
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Unable to locate the next cell or end of list in list of cells.",
-            ))
+            ));
         }
         (None, Some(p)) => {
             // Write everything up to and including the next brace
@@ -102,7 +116,7 @@ where
                 return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,
                     "Unable to locate the next cell or end of list in list of cells.",
-                ))
+                ));
             }
             (None, Some(p)) => {
                 // Write everything up to and including the closing brace
@@ -198,14 +212,8 @@ where
 
     // Check the second argument of `Cell[]` to see whether it is to be deleted
     // in which case we can ignore the Cell completely.
-    let to_ignore = vec![
-        &b"\"Message\""[..],
-        &b"\"Output\""[..],
-        &b"\"PrintTemporary\""[..],
-        &b"\"Print\""[..],
-    ];
     if num_args >= 2 {
-        let is_to_ignore = to_ignore.iter().any(|&cell_type| {
+        let is_to_ignore = CELL_STYLE_TO_IGNORE.iter().any(|&cell_type| {
             cell_bytes[args[1]..args[2]]
                 .windows(cell_type.len())
                 .any(|w| w == cell_type)
@@ -232,7 +240,7 @@ where
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "Cell[] must have at least one argument.",
-            ))
+            ));
         }
         (None, 1) => output.write_all(&cell_bytes[..args[1] - 1])?,
         (None, _) => output.write_all(&cell_bytes[..args[2] - 1])?,
@@ -249,13 +257,8 @@ where
 
     // We have now outputted the first two arguments of `Cell`.  It remains to
     // parse the optional arguments.
-    let opt_to_exclude = vec![
-        &b"CellChangeTimes"[..],
-        &b"ExpressionUUID"[..],
-        &b"CellLabel"[..],
-    ];
     for arg in 2..num_args {
-        let is_to_ignore = opt_to_exclude.iter().any(|&opt| {
+        let is_to_ignore = CELL_OPT_TO_IGNORE.iter().any(|&opt| {
             cell_bytes[args[arg]..args[arg + 1] - 1]
                 .windows(opt.len())
                 .any(|w| w == opt)
