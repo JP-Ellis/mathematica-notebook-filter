@@ -1,11 +1,16 @@
+#!/usr/bin/bash
+
 # Exit on any error
 set -eux
 
 # Run clippy and see if it has anything to say
-clippy() {
-    if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
-        cargo clippy
-    fi
+clippy_lints() {
+    cargo clippy
+}
+
+# Run rustfmt
+check_format() {
+    cargo fmt -- --check
 }
 
 # Run the standard build and test suite.
@@ -32,6 +37,8 @@ command_line() {
 }
 
 main() {
+    clippy_lints
+    check_format
     build_and_test
     command_line
 }

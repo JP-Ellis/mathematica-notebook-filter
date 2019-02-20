@@ -13,7 +13,7 @@ matrix:
 
 env:
   global:
-  - RUSTFLAGS="-C link-dead-code"
+  - RUSTFLAGS="-C link-dead-code -D warnings -D missing_docs"
 
 cache: cargo
 
@@ -29,7 +29,7 @@ addons:
       - libiberty-dev
 
 before_script:
-  - bash ci/setup.sh
+  - bash ci/before_script.sh
 
 script:
   - bash ci/script.sh
