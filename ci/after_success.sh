@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # Echo all commands before executing them
 set -o xtrace
@@ -12,7 +12,10 @@ COVERAGE_RUN=false
 run_kcov() {
     # Run kcov on all the test suites
     if [[ $COVERAGE_RUN != "true" ]]; then
-        cargo coveralls
+        # At the moment, kcov doesn't track child processes spawned by the
+        # tests, as a result, we have to manually run kcov and merge the results
+        cargo coverage
+        ./tests/notebook.sh
         COVERAGE_RUN=true
     fi
 }
@@ -39,7 +42,7 @@ coverage_coveralls() {
 }
 
 main() {
-    coverage_coveralls
+    # coverage_coveralls
     coverage_codecov
 }
 

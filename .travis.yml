@@ -38,10 +38,10 @@ before_script:
     else
         export FEATURES="";
     fi
-  - bash ./ci/before_script.sh
+  - ./ci/before_script.sh
 
 script:
-  - bash ./ci/script.sh
+  - ./ci/script.sh
 
 after_success:
-  - bash ./ci/after_success.sh
+  - ./ci/after_success.sh
