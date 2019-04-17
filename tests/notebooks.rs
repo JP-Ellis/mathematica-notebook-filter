@@ -23,7 +23,12 @@ fn check_is_minimized<P: AsRef<path::Path>>(min_file: P) {
         .len();
     let min_size = fs::metadata(min_file).expect("Output file metadata.").len();
 
-    assert!(orig_size > min_size, "Minimized file is not smaller.");
+    assert!(
+        orig_size > min_size,
+        "Minimized file is not smaller (original: {}, minimzed: {}).",
+        orig_size,
+        min_size
+    );
 }
 
 #[test]
