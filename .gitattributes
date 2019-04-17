@@ -1,1 +1,1 @@
-ci/*.nb   !filter
+tests/*.nb   !filter
