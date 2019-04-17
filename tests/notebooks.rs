@@ -2,6 +2,7 @@ use std::{env, fs, path, process};
 
 const INPUT_NOTEBOOK: &str = "tests/notebook.nb";
 
+/// Get name of the binary
 fn bin() -> path::PathBuf {
     let root = env::current_exe()
         .unwrap()
@@ -17,6 +18,7 @@ fn bin() -> path::PathBuf {
     }
 }
 
+/// Check that the minimized file is smaller than the original file.
 fn check_is_minimized<P: AsRef<path::Path>>(min_file: P) {
     let orig_size = fs::metadata(INPUT_NOTEBOOK)
         .expect("Input file metadata.")
@@ -24,7 +26,7 @@ fn check_is_minimized<P: AsRef<path::Path>>(min_file: P) {
     let min_size = fs::metadata(min_file).expect("Output file metadata.").len();
 
     assert!(
-        orig_size > min_size,
+        min_size < orig_size,
         "Minimized file is not smaller (original: {}, minimzed: {}).",
         orig_size,
         min_size
