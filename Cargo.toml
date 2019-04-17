@@ -27,7 +27,11 @@ codecov = { repository = "JP-Ellis/mathematica-notebook-filter", branch = "maste
 
 [dependencies]
 atty = "0.2.11"
-clap = { version = "2.32.0", features = ["wrap_help"] }
+clap = { version = "2.33.0", features = ["wrap_help"] }
 log = "0.4.6"
 stderrlog = "0.4.1"
 tempfile = "3.0.7"
+
+[features]
+default = []
+nightly = []
