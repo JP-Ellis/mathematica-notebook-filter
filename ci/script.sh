@@ -23,17 +23,9 @@ check_tests() {
 }
 
 check_command_line() {
-    # Try it once using `cargo run`
-    cargo run -- -vvv -i tests/test_notebook.nb -o tests/test_notebook_min.nb
-    if [[ $(wc -c < tests/test_notebook.nb) -le $(wc -c < tests/test_notebook_min.nb) ]]; then
-        echo "No reduction in file size ($(wc -c < tests/test_notebook.nb) => $(wc -c < tests/test_notebook_min.nb))." >&2
-        false
-    fi
-
-    # Try also by calling it manually
-    ./target/debug/mathematica-notebook-filter -vvv -i tests/test_notebook.nb -o tests/test_notebook_min.nb
-    if [[ $(wc -c < tests/test_notebook.nb) -le $(wc -c < tests/test_notebook_min.nb) ]]; then
-        echo "No reduction in file size ($(wc -c < tests/test_notebook.nb) => $(wc -c < tests/test_notebook_min.nb))." >&2
+    cargo run -- -vvv -i tests/notebook.nb -o tests/notebook.min.nb
+    if [[ $(wc -c < tests/notebook.nb) -le $(wc -c < tests/notebook.min.nb) ]]; then
+        echo "No reduction in file size ($(wc -c < tests/notebook.nb) => $(wc -c < tests/notebook.min.nb))." >&2
         false
     fi
 }
