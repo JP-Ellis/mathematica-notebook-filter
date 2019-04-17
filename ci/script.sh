@@ -1,46 +1,48 @@
 #!/usr/bin/bash
 
+# Echo all commands before executing them
+set -o xtrace
+# Forbid any unset variables
+set -o nounset
 # Exit on any error
-set -eux
+set -o errexit
 
-# Run clippy and see if it has anything to say
-clippy_lints() {
-    cargo clippy
+# Ensure there are no outstanding lints.
+check_lints() {
+    cargo clippy $FEATURES
 }
 
-# Run rustfmt
+# Ensure the code is correctly formatted.
 check_format() {
     cargo fmt -- --check
 }
 
-# Run the standard build and test suite.
-build_and_test() {
-    cargo build
-    cargo test
+# Run the test suite.
+check_tests() {
+    cargo test $FEATURES
 }
 
-# Test the command line and make sure it works.
-command_line() {
+check_command_line() {
     # Try it once using `cargo run`
-    cargo run -- -vvv -i ci/test_notebook.nb -o ci/test_notebook_min.nb
-    if [[ $(wc -c < ci/test_notebook.nb) -le $(wc -c < ci/test_notebook_min.nb) ]]; then
-        echo "No reduction in file size ($(wc -c < ci/test_notebook.nb) => $(wc -c < ci/test_notebook_min.nb))." >&2
+    cargo run -- -vvv -i tests/test_notebook.nb -o tests/test_notebook_min.nb
+    if [[ $(wc -c < tests/test_notebook.nb) -le $(wc -c < tests/test_notebook_min.nb) ]]; then
+        echo "No reduction in file size ($(wc -c < tests/test_notebook.nb) => $(wc -c < tests/test_notebook_min.nb))." >&2
         false
     fi
 
     # Try also by calling it manually
-    ./target/debug/mathematica-notebook-filter -vvv -i ci/test_notebook.nb -o ci/test_notebook_min.nb
-    if [[ $(wc -c < ci/test_notebook.nb) -le $(wc -c < ci/test_notebook_min.nb) ]]; then
-        echo "No reduction in file size ($(wc -c < ci/test_notebook.nb) => $(wc -c < ci/test_notebook_min.nb))." >&2
+    ./target/debug/mathematica-notebook-filter -vvv -i tests/test_notebook.nb -o tests/test_notebook_min.nb
+    if [[ $(wc -c < tests/test_notebook.nb) -le $(wc -c < tests/test_notebook_min.nb) ]]; then
+        echo "No reduction in file size ($(wc -c < tests/test_notebook.nb) => $(wc -c < tests/test_notebook_min.nb))." >&2
         false
     fi
 }
 
 main() {
-    clippy_lints
+    check_lints
     check_format
-    build_and_test
-    command_line
+    check_tests
+    check_command_line
 }
 
 main

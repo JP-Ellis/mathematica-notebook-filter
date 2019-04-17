@@ -9,6 +9,7 @@ rust:
 
 matrix:
   allow_failures:
+    - rust: beta
     - rust: nightly
 
 env:
@@ -19,6 +20,7 @@ cache: cargo
 
 addons:
   apt:
+    update: true
     packages:
       - libcurl4-openssl-dev
       - libelf-dev
@@ -27,12 +29,19 @@ addons:
       - gcc
       - binutils-dev
       - libiberty-dev
+      - libgsl0-dev
 
 before_script:
-  - bash ci/before_script.sh
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+        export FEATURES="--features nightly";
+    else
+        export FEATURES="";
+    fi
+  - bash ./ci/before_script.sh
 
 script:
-  - bash ci/script.sh
+  - bash ./ci/script.sh
 
 after_success:
-  - bash ci/after_success.sh
+  - bash ./ci/after_success.sh
