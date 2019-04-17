@@ -7,6 +7,8 @@ set -o nounset
 # Exit on any error
 set -o errexit
 
+COVERAGE_RUN=false
+
 run_kcov() {
     # Run kcov on all the test suites
     if [[ $COVERAGE_RUN != "true" ]]; then
