@@ -133,7 +133,7 @@ fn main() {
     let stdout = io::stdout();
 
     // Get the input file.
-    let mut input_file: Box<BufRead> = match matches.value_of("input") {
+    let mut input_file: Box<dyn BufRead> = match matches.value_of("input") {
         Some("-") | None => {
             if atty::is(atty::Stream::Stdin) {
                 error!("Cowardly exiting as standard input is a tty.");
@@ -161,7 +161,7 @@ fn main() {
     // Get the output file and output filename if it exists since we might need
     // to rename the output file and overwrite the input file if both input and
     // output files were identical.
-    let (mut output_file, output_filename): (Box<Write>, _) =
+    let (mut output_file, output_filename): (Box<dyn Write>, _) =
         match (matches.value_of("output"), use_temporary_file) {
             (_, true) => {
                 debug!("Creating temporary output file.");
