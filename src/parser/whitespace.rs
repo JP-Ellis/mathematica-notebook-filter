@@ -87,8 +87,8 @@ lazy dog.
 
         {
             let mut wc = WhitespaceCleaner::new(&mut output);
-            wc.write_all(input).is_ok();
-            wc.flush().is_ok();
+            assert!(wc.write_all(input).is_ok());
+            assert!(wc.flush().is_ok());
         }
         assert_eq!(
             &String::from_utf8(output).unwrap(),
@@ -108,8 +108,8 @@ lazy dog.
 
         {
             let mut wc = WhitespaceCleaner::new(&mut output);
-            wc.write_all(input.as_bytes()).is_ok();
-            wc.flush().is_ok();
+            assert!(wc.write_all(input.as_bytes()).is_ok());
+            assert!(wc.flush().is_ok());
         }
         assert_eq!(&String::from_utf8(output).unwrap(), "abc\n123\n456");
     }
